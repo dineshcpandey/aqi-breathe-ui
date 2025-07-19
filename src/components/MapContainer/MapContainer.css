@@ -2,6 +2,25 @@
     padding: 1rem;
     height: calc(100vh - 100px);
     position: relative;
+    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.map-container.with-filters {
+    margin-left: 350px;
+}
+
+.map {
+    height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+
+.map-container {
+    padding: 1rem;
+    height: calc(100vh - 100px);
+    position: relative;
 }
 
 .map {

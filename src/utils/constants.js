@@ -12,3 +12,11 @@ export const MAP_STYLES = {
     SATELLITE: 'satellite',
     DARK: 'dark'
 };
+
+export const DEFAULT_MAP_CONFIG = {
+    center: [
+        parseFloat(process.env.REACT_APP_MAP_DEFAULT_CENTER_LAT) || 28.6469,
+        parseFloat(process.env.REACT_APP_MAP_DEFAULT_CENTER_LNG) || 77.3154
+    ],
+    zoom: parseInt(process.env.REACT_APP_MAP_DEFAULT_ZOOM) || 12
+};

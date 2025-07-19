@@ -3,6 +3,7 @@ import L from 'leaflet';
 import LayerControls from '../LayerControls/LayerControls';
 import { baseLayers, getAQIColor, getAQIStatus } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
+import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
 import './MapContainer.css';
 
 // Fix for default markers in Leaflet with React
@@ -33,7 +34,8 @@ const MapContainer = ({
     // Initialize map
     useEffect(() => {
         if (mapRef.current && !mapInstanceRef.current) {
-            mapInstanceRef.current = L.map(mapRef.current).setView([40.7128, -74.0060], 10);
+            mapInstanceRef.current = L.map(mapRef.current)
+                .setView(DEFAULT_MAP_CONFIG.center, DEFAULT_MAP_CONFIG.zoom);
 
             // Add default base layer
             baseLayers[selectedMapStyle].addTo(mapInstanceRef.current);

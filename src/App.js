@@ -35,25 +35,42 @@ function App() {
       return aqiData;
     }
 
-    // Apply filtering logic here based on your data structure
+    // Apply filtering logic based on the realistic data structure
     return aqiData.filter(item => {
-      // Example filtering logic - customize based on your data structure
-      if (activeFilters.airQuality) {
-        // Filter based on AQI thresholds, PM2.5 values, etc.
-        if (activeFilters.airQuality.includes('aqi') && item.aqi > 100) return true;
-        if (activeFilters.airQuality.includes('pm25') && item.pm25 > 35) return true;
+      let shouldInclude = false;
+
+      // Air Quality filters
+      if (activeFilters.airQuality && activeFilters.airQuality.length > 0) {
+        activeFilters.airQuality.forEach(filter => {
+          switch (filter) {
+            case 'aqi':
+              if (item.aqi > 150) shouldInclude = true; // Show high AQI areas
+              break;
+            case 'pm25':
+              if (item.pm25 && item.pm25 > 100) shouldInclude = true; // Show high PM2.5 areas
+              break;
+            case 'rh':
+              if (item.rh && item.rh < 40) shouldInclude = true; // Show low humidity (dusty conditions)
+              break;
+            case 'co':
+              if (item.co && item.co > 2.0) shouldInclude = true; // Show high CO areas
+              break;
+            default:
+              break;
+          }
+        });
       }
 
-      if (activeFilters.sources) {
-        // Filter based on pollution sources
-        if (activeFilters.sources.includes('vehicle') && item.source === 'vehicle') return true;
-        if (activeFilters.sources.includes('construction') && item.source === 'construction') return true;
-        if (activeFilters.sources.includes('dust') && item.source === 'dust') return true;
+      // Source filters
+      if (activeFilters.sources && activeFilters.sources.length > 0) {
+        if (activeFilters.sources.includes(item.source)) {
+          shouldInclude = true;
+        }
       }
 
-      return false;
+      return shouldInclude;
     });
-  }, [aqiData, filters]);
+  }, [aqiData, getActiveFilters]);
 
   return (
     <div className="app">

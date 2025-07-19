@@ -412,6 +412,8 @@ console.log('Vehicle pollution sites:', data.vehicleCount);
 console.log('Dust sources:', data.dustCount);
 console.log('Pollution statistics:', getPollutionStats(data.allPollutionData));
 
+// ==================== Updated src/utils/constants.js ====================
+import { anandViharAQIData } from './dummyData';
 
 // Use the new comprehensive dummy data
 export const sampleAQIData = anandViharAQIData;
@@ -461,45 +463,43 @@ export const SOURCE_STYLES = {
     }
 };
 
-// ==================== Enhanced filtering for App.js ====================
-// Updated App.js filtering logic
-const getFilteredData = (data, filters) => {
-    const activeFilters = getActiveFilters(filters);
-
-    if (Object.keys(activeFilters).length === 0) {
-        return data;
+// Example usage in your App.js:
+/*
+import { anandViharAQIData, filterDataBySource, getPollutionStats } from './utils/dummyData';
+ 
+// In your component:
+const { getActiveFilters } = useFilters();
+ 
+const filteredData = useMemo(() => {
+  const activeFilters = getActiveFilters();
+  
+  if (Object.keys(activeFilters).length === 0) {
+    return anandViharAQIData;
+  }
+  
+  return anandViharAQIData.filter(item => {
+    let shouldInclude = false;
+    
+    // Air Quality filters
+    if (activeFilters.airQuality && activeFilters.airQuality.length > 0) {
+      activeFilters.airQuality.forEach(filter => {
+        switch (filter) {
+          case 'aqi': if (item.aqi > 150) shouldInclude = true; break;
+          case 'pm25': if (item.pm25 > 100) shouldInclude = true; break;
+          case 'rh': if (item.rh < 40) shouldInclude = true; break;
+          case 'co': if (item.co > 2.0) shouldInclude = true; break;
+        }
+      });
     }
-
-    return data.filter(item => {
-        let shouldInclude = false;
-
-        // Air Quality filters
-        if (activeFilters.airQuality && activeFilters.airQuality.length > 0) {
-            activeFilters.airQuality.forEach(filter => {
-                switch (filter) {
-                    case 'aqi':
-                        if (item.aqi > 150) shouldInclude = true; // Show high AQI areas
-                        break;
-                    case 'pm25':
-                        if (item.pm25 > 100) shouldInclude = true; // Show high PM2.5 areas
-                        break;
-                    case 'rh':
-                        if (item.rh < 40) shouldInclude = true; // Show low humidity (dusty conditions)
-                        break;
-                    case 'co':
-                        if (item.co > 2.0) shouldInclude = true; // Show high CO areas
-                        break;
-                }
-            });
-        }
-
-        // Source filters
-        if (activeFilters.sources && activeFilters.sources.length > 0) {
-            if (activeFilters.sources.includes(item.source)) {
-                shouldInclude = true;
-            }
-        }
-
-        return shouldInclude;
-    });
-};
+    
+    // Source filters
+    if (activeFilters.sources && activeFilters.sources.length > 0) {
+      if (activeFilters.sources.includes(item.source)) {
+        shouldInclude = true;
+      }
+    }
+    
+    return shouldInclude;
+  });
+}, [getActiveFilters]);
+*/

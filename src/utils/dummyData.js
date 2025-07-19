@@ -22,7 +22,7 @@ export const generateAnandViharPollutionData = () => {
     const constructionSites = [
         {
             id: 'const_001',
-            ...generateNearbyCoordinate(baseLocation, 2.5, 0), // North
+            lat: 28.6589, lng: 77.3089, // North of Anand Vihar
             source: 'construction',
             station: 'Anand Vihar Metro Construction',
             aqi: 195,
@@ -40,7 +40,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'const_002',
-            ...generateNearbyCoordinate(baseLocation, 1.8, Math.PI / 4), // NE
+            lat: 28.6512, lng: 77.3198, // NE of Anand Vihar
             source: 'construction',
             station: 'Residential Complex Site',
             aqi: 178,
@@ -58,7 +58,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'const_003',
-            ...generateNearbyCoordinate(baseLocation, 3.2, Math.PI), // West
+            lat: 28.6398, lng: 77.2987, // West of Anand Vihar
             source: 'construction',
             station: 'Highway Widening Project',
             aqi: 205,
@@ -76,7 +76,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'const_004',
-            ...generateNearbyCoordinate(baseLocation, 2.1, -Math.PI / 2), // South
+            lat: 28.6321, lng: 77.3187, // South of Anand Vihar
             source: 'construction',
             station: 'Commercial Complex',
             aqi: 167,
@@ -94,7 +94,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'const_005',
-            ...generateNearbyCoordinate(baseLocation, 4.1, 3 * Math.PI / 4), // NW
+            lat: 28.6587, lng: 77.2998, // NW of Anand Vihar
             source: 'construction',
             station: 'Industrial Building Site',
             aqi: 218,
@@ -234,8 +234,7 @@ export const generateAnandViharPollutionData = () => {
     const dustSources = [
         {
             id: 'dust_001',
-            lat: 28.6589,
-            lng: 77.3089, // North of Anand Vihar
+            lat: 28.6621, lng: 77.3089, // North of Anand Vihar
             source: 'dust',
             station: 'Open Ground Yamuna Bank',
             aqi: 203,
@@ -253,8 +252,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'dust_002',
-            lat: 28.6378,
-            lng: 77.3298, // SE of Anand Vihar
+            lat: 28.6378, lng: 77.3298, // SE of Anand Vihar
             source: 'dust',
             station: 'Vacant Plot Patparganj',
             aqi: 176,
@@ -272,8 +270,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'dust_003',
-            lat: 28.6287,
-            lng: 77.3045, // SW of Anand Vihar
+            lat: 28.6287, lng: 77.3045, // SW of Anand Vihar
             source: 'dust',
             station: 'Quarry Site Mayur Vihar',
             aqi: 225,
@@ -282,7 +279,7 @@ export const generateAnandViharPollutionData = () => {
             co: 1.3,
             no2: 42.1,
             so2: 12.4,
-            rh: 28,
+            rh: 28, // Very low humidity - dusty conditions
             temperature: 41.2,
             windSpeed: 5.8,
             timestamp: new Date().toISOString(),
@@ -291,8 +288,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'dust_004',
-            lat: 28.6621,
-            lng: 77.3234, // NE of Anand Vihar
+            lat: 28.6634, lng: 77.3234, // NE of Anand Vihar
             source: 'dust',
             station: 'Unpaved Parking Lot',
             aqi: 154,
@@ -310,8 +306,7 @@ export const generateAnandViharPollutionData = () => {
         },
         {
             id: 'dust_005',
-            lat: 28.6412,
-            lng: 77.2987, // West of Anand Vihar
+            lat: 28.6412, lng: 77.2987, // West of Anand Vihar
             source: 'dust',
             station: 'Demolished Building Site',
             aqi: 189,
@@ -320,7 +315,7 @@ export const generateAnandViharPollutionData = () => {
             co: 1.0,
             no2: 31.5,
             so2: 9.8,
-            rh: 39,
+            rh: 39, // Low humidity
             temperature: 37.9,
             windSpeed: 3.8,
             timestamp: new Date().toISOString(),
@@ -411,54 +406,3 @@ console.log('Construction sites:', data.constructionCount);
 console.log('Vehicle pollution sites:', data.vehicleCount);
 console.log('Dust sources:', data.dustCount);
 console.log('Pollution statistics:', getPollutionStats(data.allPollutionData));
-
-// ==================== Updated src/utils/constants.js ====================
-import { anandViharAQIData } from './dummyData';
-
-// Use the new comprehensive dummy data
-export const sampleAQIData = anandViharAQIData;
-
-export const MAP_STYLES = {
-    OSM: 'osm',
-    TOPO: 'topo',
-    SATELLITE: 'satellite',
-    DARK: 'dark'
-};
-
-// Default map configuration from environment variables
-export const DEFAULT_MAP_CONFIG = {
-    center: [
-        parseFloat(process.env.REACT_APP_MAP_DEFAULT_CENTER_LAT) || 28.6469,
-        parseFloat(process.env.REACT_APP_MAP_DEFAULT_CENTER_LNG) || 77.3154
-    ],
-    zoom: parseInt(process.env.REACT_APP_MAP_DEFAULT_ZOOM) || 12
-};
-
-// AQI Color and status definitions
-export const AQI_RANGES = {
-    GOOD: { min: 0, max: 50, color: '#00e400', label: 'Good' },
-    MODERATE: { min: 51, max: 100, color: '#ffff00', label: 'Moderate' },
-    UNHEALTHY_SENSITIVE: { min: 101, max: 150, color: '#ff7e00', label: 'Unhealthy for Sensitive Groups' },
-    UNHEALTHY: { min: 151, max: 200, color: '#ff0000', label: 'Unhealthy' },
-    VERY_UNHEALTHY: { min: 201, max: 300, color: '#8f3f97', label: 'Very Unhealthy' },
-    HAZARDOUS: { min: 301, max: 999, color: '#7e0023', label: 'Hazardous' }
-};
-
-// Source-specific styling
-export const SOURCE_STYLES = {
-    construction: {
-        color: '#95a5a6',
-        icon: '🏗️',
-        name: 'Construction'
-    },
-    vehicle: {
-        color: '#2c3e50',
-        icon: '🚗',
-        name: 'Vehicle'
-    },
-    dust: {
-        color: '#f39c12',
-        icon: '🌪️',
-        name: 'Dust'
-    }
-};

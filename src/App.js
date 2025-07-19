@@ -1,23 +1,29 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import Header from './components/Header/Header';
+import MapContainer from './components/MapContainer/MapContainer';
+import { sampleAQIData } from './utils/constants';
 import './App.css';
 
 function App() {
+  const [aqiData, setAqiData] = useState(sampleAQIData);
+  const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
+  const [showAQILayer, setShowAQILayer] = useState(false);
+
+  const addAQIData = (newData) => {
+    setAqiData(prevData => [...prevData, ...newData]);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app">
+      <Header />
+      <MapContainer
+        aqiData={aqiData}
+        selectedMapStyle={selectedMapStyle}
+        showAQILayer={showAQILayer}
+        onMapStyleChange={setSelectedMapStyle}
+        onAQIToggle={setShowAQILayer}
+        onAddAQIData={addAQIData}
+      />
     </div>
   );
 }

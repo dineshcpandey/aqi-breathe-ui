@@ -16,20 +16,6 @@
     overflow: hidden;
 }
 
-
-.map-container {
-    padding: 1rem;
-    height: calc(100vh - 100px);
-    position: relative;
-}
-
-.map {
-    height: 100%;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-}
-
 .aqi-marker-icon {
     color: white;
     border-radius: 50%;

@@ -20,6 +20,8 @@ const FilterPane = ({
     };
 
     const handleFilterToggle = (category, filterId) => {
+        console.log(`FilterPane: Toggling ${category}.${filterId}`); // Debug log
+        console.log('Current filter state:', filters[category][filterId]); // Debug log
         onFilterChange(category, filterId);
     };
 
@@ -55,6 +57,13 @@ const FilterPane = ({
                 </div>
 
                 <div className="filter-content">
+                    {/* Debug Info */}
+                    <div style={{ padding: '10px', fontSize: '10px', background: '#f0f0f0', margin: '10px' }}>
+                        <strong>Debug:</strong><br />
+                        AQI Filters: {JSON.stringify(filters.airQuality)}<br />
+                        Source Filters: {JSON.stringify(filters.sources)}
+                    </div>
+
                     {/* Air Quality Group */}
                     <div className="filter-group">
                         <div
@@ -128,10 +137,13 @@ const FilterPane = ({
                         <button
                             className="clear-all-btn"
                             onClick={() => {
+                                console.log('Clear All clicked'); // Debug log
+
                                 // Clear all filters
                                 Object.keys(filters).forEach(category => {
                                     Object.keys(filters[category]).forEach(filterId => {
                                         if (filters[category][filterId]) {
+                                            console.log(`Clearing ${category}.${filterId}`); // Debug log
                                             handleFilterToggle(category, filterId);
                                         }
                                     });

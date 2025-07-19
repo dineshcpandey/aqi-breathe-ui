@@ -9,7 +9,7 @@ import './App.css';
 function App() {
   const [aqiData, setAqiData] = useState(anandViharAQIData);
   const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
-  const [showAQILayer, setShowAQILayer] = useState(false); // Let user control this manually
+  const [showAQILayer, setShowAQILayer] = useState(false);
 
   const {
     filters,
@@ -25,39 +25,62 @@ function App() {
 
   // Filter data based on active filters
   const filteredAqiData = React.useMemo(() => {
-    const activeFilters = getActiveFilters();
+    // Use filters directly instead of getActiveFilters to avoid stale closure issues
+    const activeFilters = {
+      airQuality: Object.keys(filters.airQuality).filter(key => filters.airQuality[key]),
+      sources: Object.keys(filters.sources).filter(key => filters.sources[key])
+    };
 
     // Debug logging
+    console.log('=== FILTERING DEBUG ===');
+    console.log('Raw filters state:', filters);
     console.log('Active filters:', activeFilters);
     console.log('Total data points:', aqiData.length);
 
-    // If no filters are active, return empty array (show nothing)
-    if (Object.keys(activeFilters).length === 0 ||
-      ((!activeFilters.airQuality || activeFilters.airQuality.length === 0) &&
-        (!activeFilters.sources || activeFilters.sources.length === 0))) {
+    // Check if any filters are actually active
+    const hasAirQualityFilters = activeFilters.airQuality && activeFilters.airQuality.length > 0;
+    const hasSourceFilters = activeFilters.sources && activeFilters.sources.length > 0;
+    const hasAnyFilters = hasAirQualityFilters || hasSourceFilters;
+
+    if (!hasAnyFilters) {
       console.log('No active filters - showing 0 points');
       return [];
     }
 
-    // Apply filtering logic based on the realistic data structure
+    console.log('Has air quality filters:', hasAirQualityFilters, activeFilters.airQuality);
+    console.log('Has source filters:', hasSourceFilters, activeFilters.sources);
+
+    // Apply filtering logic
     const filtered = aqiData.filter(item => {
       let shouldInclude = false;
 
-      // Air Quality filters - if ANY air quality filter is active, check thresholds
-      if (activeFilters.airQuality && activeFilters.airQuality.length > 0) {
+      // Air Quality filters
+      if (hasAirQualityFilters) {
         activeFilters.airQuality.forEach(filter => {
           switch (filter) {
             case 'aqi':
-              if (item.aqi >= 150) shouldInclude = true; // Show unhealthy and above
+              if (item.aqi >= 150) {
+                shouldInclude = true;
+                console.log(`Including ${item.station} for AQI filter (${item.aqi})`);
+              }
               break;
             case 'pm25':
-              if (item.pm25 && item.pm25 >= 75) shouldInclude = true; // Show high PM2.5 areas
+              if (item.pm25 && item.pm25 >= 75) {
+                shouldInclude = true;
+                console.log(`Including ${item.station} for PM2.5 filter (${item.pm25})`);
+              }
               break;
             case 'rh':
-              if (item.rh && item.rh <= 45) shouldInclude = true; // Show low humidity (dusty conditions)
+              if (item.rh && item.rh <= 45) {
+                shouldInclude = true;
+                console.log(`Including ${item.station} for RH filter (${item.rh})`);
+              }
               break;
             case 'co':
-              if (item.co && item.co >= 1.5) shouldInclude = true; // Show elevated CO areas
+              if (item.co && item.co >= 1.5) {
+                shouldInclude = true;
+                console.log(`Including ${item.station} for CO filter (${item.co})`);
+              }
               break;
             default:
               break;
@@ -65,10 +88,11 @@ function App() {
         });
       }
 
-      // Source filters - if ANY source filter is active, include matching sources
-      if (activeFilters.sources && activeFilters.sources.length > 0) {
+      // Source filters
+      if (hasSourceFilters) {
         if (activeFilters.sources.includes(item.source)) {
           shouldInclude = true;
+          console.log(`Including ${item.station} for source filter (${item.source})`);
         }
       }
 
@@ -76,10 +100,22 @@ function App() {
     });
 
     console.log('Filtered data points:', filtered.length);
-    return filtered;
-  }, [aqiData, getActiveFilters]);
+    console.log('Filtered stations:', filtered.map(item => item.station));
+    console.log('=== END FILTERING DEBUG ===');
 
-  // Note: User has manual control over AQI layer visibility via the toggle button
+    return filtered;
+  }, [aqiData, filters]); // Use filters directly instead of getActiveFilters
+
+  // Debug: Log when filtered data changes
+  React.useEffect(() => {
+    console.log('Filtered AQI data changed:', filteredAqiData.length, 'points');
+
+    // Auto-enable AQI layer when there are filtered results
+    if (filteredAqiData.length > 0 && !showAQILayer) {
+      console.log('Auto-enabling AQI layer since we have filtered data');
+      setShowAQILayer(true);
+    }
+  }, [filteredAqiData, showAQILayer]);
 
   return (
     <div className="app">

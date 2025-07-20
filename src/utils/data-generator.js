@@ -1,67 +1,146 @@
-// run-generator.js - Simple one-file script to generate Anand Vihar data
-// Save this file and run: node run-generator.js
+// enhanced-data-generator.js - Generate time series AQI data for multiple scenarios
+// Save this file and run: node enhanced-data-generator.js
 
 const fs = require('fs');
 const path = require('path');
 
-// Quick configuration - easily modifiable
-const QUICK_CONFIG = {
-    // Area settings (currently Anand Vihar)
+// Enhanced Configuration - easily modifiable
+const CONFIG = {
+    // Area settings
     areaName: 'Anand Vihar',
     centerLat: 28.6469,
     centerLng: 77.3154,
     radiusKm: 5.0,
 
-    // How many sensors of each type
+    // Sensor counts by type
     sensorCounts: {
-        construction: 6,    // Construction sites
-        vehicle: 8,         // Traffic/transport hubs  
-        dust: 4,           // Open areas, dust sources
-        industrial: 4,     // Small industries
-        residential: 3     // Residential areas
+        construction: 6,
+        vehicle: 8,
+        dust: 4,
+        industrial: 4,
+        residential: 3
     },
 
-    // Output files
-    jsonFileName: 'sensor_data.json',
-    csvFileName: 'sensor_data.csv',
-    outputFolder: './generated_data/'
-};
+    // Time series configuration
+    timeConfig: {
+        // Historical data: July 15-20, 2025
+        historicalStart: '2025-07-15T00:00:00Z',
+        historicalEnd: '2025-07-20T23:59:59Z',
 
-// Sensor templates with realistic data ranges
-const SENSOR_TEMPLATES = {
-    construction: {
-        names: ['Construction Site', 'Metro Construction', 'Building Project', 'Highway Expansion'],
-        aqiRange: [150, 250], pm25Range: [80, 160], pm10Range: [150, 350],
-        coRange: [1.5, 3.5], no2Range: [40, 85], so2Range: [15, 35]
+        // Current data: July 20, 2025 (latest reading)
+        currentTime: '2025-07-20T14:30:00Z',
+
+        // Predicted data: July 20-23, 2025
+        predictedStart: '2025-07-20T15:00:00Z',
+        predictedEnd: '2025-07-23T23:59:59Z',
+
+        // Data interval in minutes
+        intervalMinutes: 60  // Generate data every hour
     },
-    vehicle: {
-        names: ['Traffic Junction', 'Bus Terminal', 'Highway Monitor', 'Parking Complex'],
-        aqiRange: [130, 220], pm25Range: [70, 140], pm10Range: [120, 250],
-        coRange: [2.5, 5.5], no2Range: [60, 110], so2Range: [20, 40]
+
+    // Output configuration
+    output: {
+        folder: './generated_data/',
+        files: {
+            current: 'current_reading.csv',
+            historical: 'historical_reading.csv',
+            predicted: 'predicted_reading.csv',
+            sensors: 'sensor_locations.json'  // Static sensor info
+        }
     },
-    dust: {
-        names: ['Open Ground', 'Vacant Plot', 'Riverbank Area', 'Quarry Site'],
-        aqiRange: [160, 280], pm25Range: [90, 200], pm10Range: [200, 450],
-        coRange: [0.8, 2.0], no2Range: [25, 55], so2Range: [8, 20]
-    },
-    industrial: {
-        names: ['Industrial Zone', 'Factory Area', 'Manufacturing Hub', 'Processing Plant'],
-        aqiRange: [140, 200], pm25Range: [75, 135], pm10Range: [140, 220],
-        coRange: [1.8, 4.0], no2Range: [50, 95], so2Range: [25, 60]
-    },
-    residential: {
-        names: ['Residential Area', 'Community Center', 'School Zone', 'Market Area'],
-        aqiRange: [100, 160], pm25Range: [50, 90], pm10Range: [90, 150],
-        coRange: [1.0, 2.5], no2Range: [35, 65], so2Range: [10, 25]
+
+    // Weather and seasonal factors for July 2025 (Delhi summer)
+    environmentalBase: {
+        temperature: { min: 32, max: 44, avg: 38 },
+        humidity: { min: 25, max: 75, avg: 45 },
+        windSpeed: { min: 1.5, max: 8.5, avg: 4.2 },
+        // Monsoon probability (increases towards end of July)
+        monsoonFactor: 0.15
     }
 };
 
+// Enhanced sensor templates with time-based variations
+const SENSOR_TEMPLATES = {
+    construction: {
+        names: ['Construction Site', 'Metro Construction', 'Building Project', 'Highway Expansion'],
+        baseValues: {
+            aqi: [150, 250], pm25: [80, 160], pm10: [150, 350],
+            co: [1.5, 3.5], no2: [40, 85], so2: [15, 35]
+        },
+        dailyPattern: {
+            // Work hours have higher pollution
+            peakHours: [9, 10, 11, 14, 15, 16, 17],
+            peakMultiplier: 1.8,
+            nightMultiplier: 0.3
+        },
+        weekendReduction: 0.4, // 60% reduction on weekends
+        trendFactor: 0.02 // Slight increase over time due to ongoing work
+    },
+    vehicle: {
+        names: ['Traffic Junction', 'Bus Terminal', 'Highway Monitor', 'Parking Complex'],
+        baseValues: {
+            aqi: [130, 220], pm25: [70, 140], pm10: [120, 250],
+            co: [2.5, 5.5], no2: [60, 110], so2: [20, 40]
+        },
+        dailyPattern: {
+            peakHours: [7, 8, 9, 17, 18, 19, 20],
+            peakMultiplier: 1.9,
+            nightMultiplier: 0.5
+        },
+        weekendReduction: 0.25, // 25% reduction on weekends
+        trendFactor: 0.01
+    },
+    dust: {
+        names: ['Open Ground', 'Vacant Plot', 'Riverbank Area', 'Quarry Site'],
+        baseValues: {
+            aqi: [160, 280], pm25: [90, 200], pm10: [200, 450],
+            co: [0.8, 2.0], no2: [25, 55], so2: [8, 20]
+        },
+        dailyPattern: {
+            peakHours: [12, 13, 14, 15, 16], // Afternoon winds
+            peakMultiplier: 2.2,
+            nightMultiplier: 0.6
+        },
+        weekendReduction: 0.1, // Minimal weekend change
+        trendFactor: -0.005 // Slight decrease due to some dust control measures
+    },
+    industrial: {
+        names: ['Industrial Zone', 'Factory Area', 'Manufacturing Hub', 'Processing Plant'],
+        baseValues: {
+            aqi: [140, 200], pm25: [75, 135], pm10: [140, 220],
+            co: [1.8, 4.0], no2: [50, 95], so2: [25, 60]
+        },
+        dailyPattern: {
+            peakHours: [9, 10, 11, 14, 15, 16, 17],
+            peakMultiplier: 1.6,
+            nightMultiplier: 0.7
+        },
+        weekendReduction: 0.3,
+        trendFactor: 0.005
+    },
+    residential: {
+        names: ['Residential Area', 'Community Center', 'School Zone', 'Market Area'],
+        baseValues: {
+            aqi: [100, 160], pm25: [50, 90], pm10: [90, 150],
+            co: [1.0, 2.5], no2: [35, 65], so2: [10, 25]
+        },
+        dailyPattern: {
+            peakHours: [6, 7, 8, 18, 19, 20], // Cooking times
+            peakMultiplier: 1.4,
+            nightMultiplier: 0.8
+        },
+        weekendReduction: 0.05,
+        trendFactor: 0.003
+    }
+};
+
+// Utility functions
 function generateRandomInRange([min, max]) {
     return min + Math.random() * (max - min);
 }
 
 function generateCoordinate(center, radiusKm) {
-    const radiusDegrees = radiusKm / 111.32; // Approximate conversion
+    const radiusDegrees = radiusKm / 111.32;
     const angle = Math.random() * 2 * Math.PI;
     const distance = Math.random() * radiusDegrees;
 
@@ -74,219 +153,363 @@ function generateCoordinate(center, radiusKm) {
     };
 }
 
-function generateSensor(sourceType, index) {
-    const template = SENSOR_TEMPLATES[sourceType];
-    const center = { lat: QUICK_CONFIG.centerLat, lng: QUICK_CONFIG.centerLng };
-    const coords = generateCoordinate(center, QUICK_CONFIG.radiusKm);
+function calculateSeverity(aqi) {
+    if (aqi <= 100) return 'moderate';
+    else if (aqi <= 150) return 'high';
+    else if (aqi <= 300) return 'very_high';
+    else return 'hazardous';
+}
 
-    // Seasonal factor for July (summer in Delhi)
-    const summerFactor = 1.15;
-    const variation = 0.85 + Math.random() * 0.3; // ±15% variation
+function getTimeBasedMultiplier(datetime, template, dataType = 'historical') {
+    const hour = datetime.getHours();
+    const dayOfWeek = datetime.getDay(); // 0 = Sunday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    // Generate pollutant values
-    const aqi = Math.round(generateRandomInRange(template.aqiRange) * summerFactor * variation);
-    const pm25 = Math.round(generateRandomInRange(template.pm25Range) * summerFactor * variation * 10) / 10;
-    const pm10 = Math.round(generateRandomInRange(template.pm10Range) * summerFactor * variation * 10) / 10;
-    const co = Math.round(generateRandomInRange(template.coRange) * variation * 100) / 100;
-    const no2 = Math.round(generateRandomInRange(template.no2Range) * variation * 10) / 10;
-    const so2 = Math.round(generateRandomInRange(template.so2Range) * variation * 10) / 10;
+    let multiplier = 1.0;
 
-    // Environmental data for July in Delhi
-    const temperature = Math.round((32 + Math.random() * 12) * 10) / 10; // 32-44°C
-    const humidity = Math.round((35 + Math.random() * 35) * 10) / 10;    // 35-70%
-    const windSpeed = Math.round((1.5 + Math.random() * 6) * 10) / 10;   // 1.5-7.5 m/s
+    // Apply daily pattern
+    if (template.dailyPattern.peakHours.includes(hour)) {
+        multiplier = template.dailyPattern.peakMultiplier;
+    } else if (hour >= 0 && hour <= 5) {
+        multiplier = template.dailyPattern.nightMultiplier;
+    }
 
-    // Calculate severity
-    let severity;
-    if (aqi <= 100) severity = 'moderate';
-    else if (aqi <= 150) severity = 'high';
-    else if (aqi <= 300) severity = 'very_high';
-    else severity = 'hazardous';
+    // Apply weekend reduction
+    if (isWeekend) {
+        multiplier *= (1 - template.weekendReduction);
+    }
 
-    // Generate station name
-    const baseName = template.names[Math.floor(Math.random() * template.names.length)];
-    const station = `${baseName} ${String.fromCharCode(65 + index)}`; // A, B, C, etc.
+    // Add prediction uncertainty for future data
+    if (dataType === 'predicted') {
+        const uncertaintyFactor = 0.85 + Math.random() * 0.3; // ±15% uncertainty
+        multiplier *= uncertaintyFactor;
+    }
+
+    return multiplier;
+}
+
+function generateEnvironmentalData(datetime, dataType = 'historical') {
+    const hour = datetime.getHours();
+    const base = CONFIG.environmentalBase;
+
+    // Temperature varies by hour and season
+    let temperature = base.avg + Math.sin((hour - 6) * Math.PI / 12) * 6; // Peak at 2 PM
+    temperature += (Math.random() - 0.5) * 4; // Random variation
+    temperature = Math.max(base.min, Math.min(base.max, temperature));
+
+    // Humidity inversely related to temperature
+    let humidity = base.avg + (base.avg - temperature) * 1.2;
+    humidity += (Math.random() - 0.5) * 20;
+    humidity = Math.max(base.min, Math.min(base.max, humidity));
+
+    // Wind speed varies with time of day
+    let windSpeed = base.avg + Math.sin((hour - 12) * Math.PI / 12) * 2;
+    windSpeed += (Math.random() - 0.5) * 3;
+    windSpeed = Math.max(base.min, Math.min(base.max, windSpeed));
+
+    // Add prediction uncertainty
+    if (dataType === 'predicted') {
+        const uncertainty = 0.9 + Math.random() * 0.2;
+        temperature *= uncertainty;
+        humidity *= (0.95 + Math.random() * 0.1);
+        windSpeed *= uncertainty;
+    }
 
     return {
-        id: `sensor_${sourceType}_${String(index + 1).padStart(3, '0')}`,
-        station,
-        lat: coords.lat,
-        lng: coords.lng,
-        aqi,
-        pm25,
-        pm10,
-        co,
-        no2,
-        so2,
-        temperature,
-        humidity,
-        windSpeed,
-        source: sourceType,
-        severity,
-        timestamp: new Date().toISOString(),
-        description: `${station} - Monitoring station for ${sourceType} pollution source`,
-        area: QUICK_CONFIG.areaName,
-        dataQuality: 'generated'
+        temperature: Math.round(temperature * 10) / 10,
+        humidity: Math.round(humidity * 10) / 10,
+        windSpeed: Math.round(windSpeed * 10) / 10
     };
 }
 
-function generateAllSensors() {
-    console.log(`🚀 Generating sensors for ${QUICK_CONFIG.areaName}...`);
-    console.log(`📍 Center: ${QUICK_CONFIG.centerLat}, ${QUICK_CONFIG.centerLng}`);
-    console.log(`📏 Coverage: ${QUICK_CONFIG.radiusKm * 2}km diameter`);
+function generateSensorReading(sensor, datetime, dataType = 'historical') {
+    const template = SENSOR_TEMPLATES[sensor.source];
+    const timeMultiplier = getTimeBasedMultiplier(datetime, template, dataType);
+    const environmental = generateEnvironmentalData(datetime, dataType);
+
+    // Apply trend factor based on days elapsed
+    const referenceDate = new Date('2025-07-15T00:00:00Z');
+    const daysElapsed = (datetime - referenceDate) / (1000 * 60 * 60 * 24);
+    const trendMultiplier = 1 + (template.trendFactor * daysElapsed);
+
+    // Weather impact (rain reduces particulates)
+    const isRainy = Math.random() < CONFIG.environmentalBase.monsoonFactor;
+    const weatherMultiplier = isRainy ? 0.7 : 1.0;
+
+    // Generate pollutant values
+    const readings = {};
+    Object.entries(template.baseValues).forEach(([pollutant, range]) => {
+        const baseValue = generateRandomInRange(range);
+        let value = baseValue * timeMultiplier * trendMultiplier * weatherMultiplier;
+
+        // Add measurement noise
+        const noise = 0.95 + Math.random() * 0.1;
+        value *= noise;
+
+        // Round appropriately
+        readings[pollutant] = pollutant.includes('co') ?
+            Math.round(value * 100) / 100 :
+            Math.round(value * 10) / 10;
+    });
+
+    return {
+        sensor_id: sensor.id,
+        station: sensor.station,
+        latitude: sensor.lat,
+        longitude: sensor.lng,
+        timestamp: datetime.toISOString(),
+        aqi: Math.round(readings.aqi),
+        pm25: readings.pm25,
+        pm10: readings.pm10,
+        co: readings.co,
+        no2: readings.no2,
+        so2: readings.so2,
+        temperature: environmental.temperature,
+        humidity: environmental.humidity,
+        wind_speed: environmental.windSpeed,
+        source_type: sensor.source,
+        severity: calculateSeverity(Math.round(readings.aqi)),
+        data_type: dataType,
+        area: sensor.area
+    };
+}
+
+function generateStaticSensors() {
+    console.log(`🚀 Generating sensor locations for ${CONFIG.areaName}...`);
 
     const sensors = [];
+    const center = { lat: CONFIG.centerLat, lng: CONFIG.centerLng };
 
-    // Generate sensors for each type
-    Object.entries(QUICK_CONFIG.sensorCounts).forEach(([sourceType, count]) => {
+    Object.entries(CONFIG.sensorCounts).forEach(([sourceType, count]) => {
         console.log(`   Creating ${count} ${sourceType} sensors...`);
 
         for (let i = 0; i < count; i++) {
-            sensors.push(generateSensor(sourceType, i));
+            const template = SENSOR_TEMPLATES[sourceType];
+            const coords = generateCoordinate(center, CONFIG.radiusKm);
+            const baseName = template.names[Math.floor(Math.random() * template.names.length)];
+            const station = `${baseName} ${String.fromCharCode(65 + i)}`;
+
+            sensors.push({
+                id: `sensor_${sourceType}_${String(i + 1).padStart(3, '0')}`,
+                station,
+                lat: coords.lat,
+                lng: coords.lng,
+                source: sourceType,
+                area: CONFIG.areaName,
+                description: `${station} - Monitoring station for ${sourceType} pollution source`
+            });
         }
     });
 
-    // Sort by ID
-    sensors.sort((a, b) => a.id.localeCompare(b.id));
-
-    const totalSensors = sensors.length;
-    console.log(`✅ Generated ${totalSensors} sensors total`);
-
+    console.log(`✅ Generated ${sensors.length} sensor locations`);
     return sensors;
 }
 
-function ensureOutputDir() {
-    if (!fs.existsSync(QUICK_CONFIG.outputFolder)) {
-        fs.mkdirSync(QUICK_CONFIG.outputFolder, { recursive: true });
-        console.log(`📁 Created output directory: ${QUICK_CONFIG.outputFolder}`);
+function generateTimeSeriesData(sensors, startDate, endDate, dataType) {
+    console.log(`📊 Generating ${dataType} data from ${startDate} to ${endDate}...`);
+
+    const readings = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const intervalMs = CONFIG.timeConfig.intervalMinutes * 60 * 1000;
+
+    let currentTime = new Date(start);
+    let totalReadings = 0;
+
+    while (currentTime <= end) {
+        sensors.forEach(sensor => {
+            const reading = generateSensorReading(sensor, new Date(currentTime), dataType);
+            readings.push(reading);
+            totalReadings++;
+        });
+
+        currentTime = new Date(currentTime.getTime() + intervalMs);
+    }
+
+    console.log(`   Generated ${totalReadings} readings (${readings.length / sensors.length} timestamps per sensor)`);
+    return readings;
+}
+
+function generateCurrentData(sensors) {
+    console.log('📈 Generating current readings...');
+
+    const currentTime = new Date(CONFIG.timeConfig.currentTime);
+    const readings = sensors.map(sensor =>
+        generateSensorReading(sensor, currentTime, 'current')
+    );
+
+    console.log(`   Generated ${readings.length} current readings`);
+    return readings;
+}
+
+function ensureOutputDirectory() {
+    if (!fs.existsSync(CONFIG.output.folder)) {
+        fs.mkdirSync(CONFIG.output.folder, { recursive: true });
+        console.log(`📁 Created output directory: ${CONFIG.output.folder}`);
     }
 }
 
-function saveJSONFile(sensors) {
-    const jsonPath = path.join(QUICK_CONFIG.outputFolder, QUICK_CONFIG.jsonFileName);
+function saveCSV(data, filename) {
+    if (!data || data.length === 0) {
+        console.warn(`⚠️  No data to save for ${filename}`);
+        return;
+    }
 
-    // Simple format - just the sensors array
-    const jsonContent = JSON.stringify(sensors, null, 2);
+    const filepath = path.join(CONFIG.output.folder, filename);
+    const headers = Object.keys(data[0]).join(',');
 
-    fs.writeFileSync(jsonPath, jsonContent, 'utf8');
-    const sizeKB = (fs.statSync(jsonPath).size / 1024).toFixed(1);
-    console.log(`💾 Saved JSON: ${jsonPath} (${sizeKB} KB)`);
-}
-
-function saveCSVFile(sensors) {
-    const csvPath = path.join(QUICK_CONFIG.outputFolder, QUICK_CONFIG.csvFileName);
-
-    // CSV headers
-    const headers = [
-        'id', 'station', 'lat', 'lng', 'aqi', 'pm25', 'pm10', 'co', 'no2', 'so2',
-        'temperature', 'humidity', 'windSpeed', 'source', 'severity', 'timestamp', 'description'
-    ];
-
-    // Build CSV content
-    let csvContent = headers.join(',') + '\n';
-
-    sensors.forEach(sensor => {
-        const row = headers.map(header => {
-            let value = sensor[header];
-            // Escape description field
-            if (header === 'description' && typeof value === 'string') {
-                value = `"${value.replace(/"/g, '""')}"`;
+    let csvContent = headers + '\n';
+    data.forEach(row => {
+        const values = Object.values(row).map(value => {
+            // Escape strings that contain commas
+            if (typeof value === 'string' && value.includes(',')) {
+                return `"${value.replace(/"/g, '""')}"`;
             }
             return value;
         });
-        csvContent += row.join(',') + '\n';
+        csvContent += values.join(',') + '\n';
     });
 
-    fs.writeFileSync(csvPath, csvContent, 'utf8');
-    const sizeKB = (fs.statSync(csvPath).size / 1024).toFixed(1);
-    console.log(`💾 Saved CSV: ${csvPath} (${sizeKB} KB)`);
+    fs.writeFileSync(filepath, csvContent, 'utf8');
+    const sizeKB = (fs.statSync(filepath).size / 1024).toFixed(1);
+    console.log(`💾 Saved: ${filepath} (${sizeKB} KB, ${data.length} records)`);
 }
 
-function generateSummary(sensors) {
-    // Calculate statistics
-    const sourceStats = {};
-    let totalAQI = 0;
-    let minAQI = Infinity;
-    let maxAQI = -Infinity;
+function saveSensorLocations(sensors) {
+    const filepath = path.join(CONFIG.output.folder, CONFIG.output.files.sensors);
+    const sensorData = {
+        metadata: {
+            area: CONFIG.areaName,
+            center: { lat: CONFIG.centerLat, lng: CONFIG.centerLng },
+            radius_km: CONFIG.radiusKm,
+            total_sensors: sensors.length,
+            generated_at: new Date().toISOString(),
+            sensor_types: CONFIG.sensorCounts
+        },
+        sensors: sensors
+    };
 
-    sensors.forEach(sensor => {
-        sourceStats[sensor.source] = (sourceStats[sensor.source] || 0) + 1;
-        totalAQI += sensor.aqi;
-        minAQI = Math.min(minAQI, sensor.aqi);
-        maxAQI = Math.max(maxAQI, sensor.aqi);
-    });
-
-    const avgAQI = Math.round(totalAQI / sensors.length);
-
-    console.log('\n📊 Generation Summary:');
-    console.log(`   Area: ${QUICK_CONFIG.areaName}`);
-    console.log(`   Total Sensors: ${sensors.length}`);
-    console.log(`   AQI Range: ${minAQI} - ${maxAQI} (avg: ${avgAQI})`);
-    console.log('   Source Distribution:');
-    Object.entries(sourceStats).forEach(([source, count]) => {
-        console.log(`     ${source}: ${count} sensors`);
-    });
-
-    return { sourceStats, minAQI, maxAQI, avgAQI };
+    fs.writeFileSync(filepath, JSON.stringify(sensorData, null, 2), 'utf8');
+    const sizeKB = (fs.statSync(filepath).size / 1024).toFixed(1);
+    console.log(`💾 Saved sensor locations: ${filepath} (${sizeKB} KB)`);
 }
 
-// Main execution
-async function main() {
-    console.log('\n🌍 Quick AQI Data Generator');
+function generateDataSummary(currentData, historicalData, predictedData) {
+    console.log('\n📊 Data Generation Summary:');
     console.log('============================');
+    console.log(`Area: ${CONFIG.areaName}`);
+    console.log(`Total Sensors: ${CONFIG.sensorCounts.construction + CONFIG.sensorCounts.vehicle + CONFIG.sensorCounts.dust + CONFIG.sensorCounts.industrial + CONFIG.sensorCounts.residential}`);
+    console.log(`\nDataset Sizes:`);
+    console.log(`  Current readings: ${currentData.length} records`);
+    console.log(`  Historical readings: ${historicalData.length} records`);
+    console.log(`  Predicted readings: ${predictedData.length} records`);
+    console.log(`  Total readings: ${currentData.length + historicalData.length + predictedData.length} records`);
+
+    // Calculate AQI statistics for current data
+    const aqiValues = currentData.map(r => r.aqi);
+    const avgAQI = Math.round(aqiValues.reduce((a, b) => a + b, 0) / aqiValues.length);
+    const minAQI = Math.min(...aqiValues);
+    const maxAQI = Math.max(...aqiValues);
+
+    console.log(`\nCurrent AQI Stats:`);
+    console.log(`  Range: ${minAQI} - ${maxAQI}`);
+    console.log(`  Average: ${avgAQI}`);
+
+    // Source distribution
+    const sourceStats = {};
+    currentData.forEach(reading => {
+        sourceStats[reading.source_type] = (sourceStats[reading.source_type] || 0) + 1;
+    });
+
+    console.log(`\nSource Distribution:`);
+    Object.entries(sourceStats).forEach(([source, count]) => {
+        console.log(`  ${source}: ${count} sensors`);
+    });
+}
+
+// Main execution function
+async function main() {
+    console.log('\n🌍 Enhanced AQI Time Series Data Generator');
+    console.log('===========================================');
+    console.log(`Configuration:`);
+    console.log(`  Area: ${CONFIG.areaName}`);
+    console.log(`  Historical: ${CONFIG.timeConfig.historicalStart} to ${CONFIG.timeConfig.historicalEnd}`);
+    console.log(`  Current: ${CONFIG.timeConfig.currentTime}`);
+    console.log(`  Predicted: ${CONFIG.timeConfig.predictedStart} to ${CONFIG.timeConfig.predictedEnd}`);
+    console.log(`  Data interval: ${CONFIG.timeConfig.intervalMinutes} minutes`);
 
     try {
-        // Create output directory
-        ensureOutputDir();
+        // Ensure output directory exists
+        ensureOutputDirectory();
 
-        // Generate sensors
-        const sensors = generateAllSensors();
+        // Step 1: Generate static sensor locations
+        const sensors = generateStaticSensors();
+        saveSensorLocations(sensors);
 
-        // Save files
-        saveJSONFile(sensors);
-        saveCSVFile(sensors);
+        // Step 2: Generate current readings
+        const currentData = generateCurrentData(sensors);
+        saveCSV(currentData, CONFIG.output.files.current);
 
-        // Show summary
-        generateSummary(sensors);
+        // Step 3: Generate historical data
+        const historicalData = generateTimeSeriesData(
+            sensors,
+            CONFIG.timeConfig.historicalStart,
+            CONFIG.timeConfig.historicalEnd,
+            'historical'
+        );
+        saveCSV(historicalData, CONFIG.output.files.historical);
 
-        console.log('\n✅ Data generation completed!');
-        console.log(`📁 Files saved in: ${QUICK_CONFIG.outputFolder}`);
-        console.log('\n📋 Next Steps:');
-        console.log('1. Copy the generated files to your React app');
-        console.log('2. Update your app configuration to use these files');
-        console.log('3. The system will auto-generate time series for July 15-20, 2025');
+        // Step 4: Generate predicted data
+        const predictedData = generateTimeSeriesData(
+            sensors,
+            CONFIG.timeConfig.predictedStart,
+            CONFIG.timeConfig.predictedEnd,
+            'predicted'
+        );
+        saveCSV(predictedData, CONFIG.output.files.predicted);
+
+        // Step 5: Generate summary
+        generateDataSummary(currentData, historicalData, predictedData);
+
+        console.log('\n✅ Enhanced data generation completed successfully!');
+        console.log(`📁 Files saved in: ${CONFIG.output.folder}`);
+        console.log('\n📋 Generated Files:');
+        console.log(`  ${CONFIG.output.files.current} - Latest sensor readings`);
+        console.log(`  ${CONFIG.output.files.historical} - Historical time series (July 15-20)`);
+        console.log(`  ${CONFIG.output.files.predicted} - Predicted time series (July 20-23)`);
+        console.log(`  ${CONFIG.output.files.sensors} - Static sensor location data`);
+
+        console.log('\n🎯 Next Steps:');
+        console.log('1. Import these CSV files into your GIS dashboard');
+        console.log('2. Use current_reading.csv for real-time display');
+        console.log('3. Use historical_reading.csv for trend analysis');
+        console.log('4. Use predicted_reading.csv for forecasting views');
+        console.log('5. Use sensor_locations.json for sensor metadata');
 
     } catch (error) {
-        console.error('❌ Error:', error.message);
+        console.error('❌ Error during data generation:', error.message);
+        console.error(error.stack);
         process.exit(1);
     }
 }
 
-// Configuration examples for other areas (uncomment to use):
+// Allow easy configuration modification for different scenarios
+function setConfiguration(customConfig) {
+    Object.assign(CONFIG, customConfig);
+    console.log('✅ Configuration updated');
+}
 
-/*
-// For Connaught Place
-QUICK_CONFIG.areaName = 'Connaught Place';
-QUICK_CONFIG.centerLat = 28.6315;
-QUICK_CONFIG.centerLng = 77.2167;
-QUICK_CONFIG.radiusKm = 2.5;
-QUICK_CONFIG.sensorCounts.vehicle = 10; // More traffic focus
-QUICK_CONFIG.jsonFileName = 'connaught_place_sensors.json';
-QUICK_CONFIG.csvFileName = 'connaught_place_sensors.csv';
-*/
+// Export for programmatic usage
+module.exports = {
+    CONFIG,
+    setConfiguration,
+    main,
+    generateStaticSensors,
+    generateTimeSeriesData,
+    generateCurrentData
+};
 
-/*
-// For Gurgaon Cyber City  
-QUICK_CONFIG.areaName = 'Gurgaon Cyber City';
-QUICK_CONFIG.centerLat = 28.4595;
-QUICK_CONFIG.centerLng = 77.0266;
-QUICK_CONFIG.radiusKm = 4.0;
-QUICK_CONFIG.sensorCounts.construction = 8; // More construction
-QUICK_CONFIG.jsonFileName = 'gurgaon_sensors.json';
-QUICK_CONFIG.csvFileName = 'gurgaon_sensors.csv';
-*/
-
-// Run the generator
+// Run if called directly
 if (require.main === module) {
     main();
-}   
+}

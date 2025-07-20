@@ -79,3 +79,206 @@
         margin: 10px 0;
     }
 }
+
+/* Sensor Information in Layer Controls */
+.control-group.sensor-info {
+    background: rgba(52, 152, 219, 0.05);
+    border-left: 3px solid #3498db;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.sensor-stats-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sensor-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.sensor-stat-row .stat-label {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.sensor-stat-row .stat-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Severity Breakdown */
+.severity-breakdown {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.severity-title {
+    font-size: 0.75rem;
+    color: #2980b9;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.severity-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    margin-bottom: 3px;
+}
+
+.severity-icon {
+    font-size: 10px;
+    width: 12px;
+    text-align: center;
+}
+
+.severity-label {
+    flex: 1;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.severity-count {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.7rem;
+}
+
+/* Tool Information */
+.tool-info {
+    background: rgba(241, 196, 15, 0.1);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #f39c12;
+    font-weight: 500;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* Enhanced Status Indicators for Map Container */
+.sensor-indicator,
+.sensor-aqi-indicator,
+.option-indicator {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.sensor-aqi-indicator {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+    border-color: rgba(46, 204, 113, 0.2);
+}
+
+.option-indicator {
+    background: rgba(155, 89, 182, 0.1);
+    color: #9b59b6;
+    border-color: rgba(155, 89, 182, 0.2);
+}
+
+/* Data Available Info */
+.data-available-info {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 800;
+    pointer-events: none;
+}
+
+.quick-hint {
+    background: rgba(52, 152, 219, 0.95);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(52, 152, 219, 0.3);
+    animation: fadeInHint 0.5s ease-out;
+}
+
+@keyframes fadeInHint {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.hint-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .control-group.sensor-info {
+        padding: 10px;
+    }
+
+    .sensor-stats-mini {
+        gap: 4px;
+    }
+
+    .sensor-stat-row {
+        font-size: 0.75rem;
+    }
+
+    .severity-item {
+        font-size: 0.7rem;
+        gap: 4px;
+    }
+
+    .data-available-info {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+
+    .quick-hint {
+        text-align: center;
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Additional status bar enhancements */
+.map-status-bar .status-details {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.map-status-bar .status-details>span {
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    .map-status-bar .status-details {
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .map-status-bar .status-details>span {
+        font-size: 0.7rem;
+        padding: 1px 6px;
+    }
+}

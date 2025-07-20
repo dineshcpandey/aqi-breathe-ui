@@ -1,11 +1,13 @@
+// src/components/MapContainer/MapContainer.jsx - Updated with Sensor Integration
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import LayerControls from '../LayerControls/LayerControls';
+import EnhancedGridLayer from '../GridLayer/EnhancedGridLayer';
+import AQIMarker from '../AQIMarker/AQIMarker'; // New sensor marker component
 import { baseLayers } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
 import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
 import './EnhancedMapContainer.css';
-import EnhancedGridLayer from '../GridLayer/EnhancedGridLayer';
 
 // Fix for default markers in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -26,7 +28,12 @@ const MapContainer = ({
     pollutantStats,
     sourceStats,
     filtersVisible,
-    visibleGridCount = 0
+    visibleGridCount = 0,
+    // New sensor-related props
+    sensorData = [],
+    showSensors = true,
+    sensorFilters = {},
+    sensorDisplayOptions = {}
 }) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -148,16 +155,57 @@ const MapContainer = ({
     const getStatusMessage = () => {
         const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
 
+        let message = '';
+
+        // Grid layer status
         if (selectedSources.length === 0) {
-            return `Showing base ${pollutantName} distribution. Select pollution sources to see their contribution intensity.`;
+            message = `Showing base ${pollutantName} distribution`;
+        } else {
+            const sourceNames = selectedSources.map(source =>
+                enhancedGridData?.pollutionSources?.[source]?.name || source
+            ).join(' + ');
+            message = `Showing ${pollutantName} colored by concentration, opacity by ${sourceNames} contribution (${visibleGridCount} grids visible)`;
         }
 
-        const sourceNames = selectedSources.map(source =>
-            enhancedGridData?.pollutionSources?.[source]?.name || source
-        ).join(' + ');
+        // Add sensor status
+        if (showSensors && sensorData.length > 0) {
+            const activeSensorFilters = Object.values(sensorFilters.source || {}).filter(Boolean).length +
+                Object.values(sensorFilters.severity || {}).filter(Boolean).length;
 
-        return `Showing ${pollutantName} colored by concentration, opacity by ${sourceNames} contribution (${visibleGridCount} grids visible)`;
+            if (activeSensorFilters > 0) {
+                message += `. ${sensorData.length} filtered monitoring stations displayed`;
+            } else {
+                message += `. ${sensorData.length} monitoring stations displayed`;
+            }
+        } else if (showSensors) {
+            message += '. No monitoring stations to display';
+        }
+
+        return message;
     };
+
+    // Calculate sensor statistics for display
+    const getSensorStats = () => {
+        if (!sensorData || sensorData.length === 0) return null;
+
+        const stats = {
+            total: sensorData.length,
+            avgAQI: Math.round(sensorData.reduce((sum, sensor) => sum + sensor.aqi, 0) / sensorData.length),
+            maxAQI: Math.max(...sensorData.map(s => s.aqi)),
+            minAQI: Math.min(...sensorData.map(s => s.aqi))
+        };
+
+        // Count by severity
+        const severityCounts = sensorData.reduce((acc, sensor) => {
+            acc[sensor.severity] = (acc[sensor.severity] || 0) + 1;
+            return acc;
+        }, {});
+
+        stats.severityBreakdown = severityCounts;
+        return stats;
+    };
+
+    const sensorStats = getSensorStats();
 
     return (
         <div className={`map-container ${filtersVisible ? 'with-filters' : ''}`}>
@@ -169,35 +217,74 @@ const MapContainer = ({
                 distanceMode={distanceMode}
                 onDistanceModeToggle={toggleDistanceMode}
                 coordinates={coordinates}
+                // New sensor controls
+                showSensors={showSensors}
+                sensorStats={sensorStats}
             />
 
-            {/* Status Information */}
+            {/* Enhanced Status Information */}
             <div className="map-status-bar">
                 <div className="status-message">
                     {getStatusMessage()}
                 </div>
-                {enhancedGridData && (
-                    <div className="status-details">
-                        <span className="pollutant-indicator">
-                            🌫️ {enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name}
-                        </span>
-                        {selectedSources.length > 0 && (
-                            <>
-                                <span className="sources-indicator">
-                                    🏭 {selectedSources.length} source{selectedSources.length !== 1 ? 's' : ''}
-                                </span>
-                                <span className="grids-indicator">
-                                    📊 {visibleGridCount} grid{visibleGridCount !== 1 ? 's' : ''} visible
-                                </span>
-                            </>
-                        )}
-                        {selectedSources.length === 0 && (
-                            <span className="base-layer-indicator">
-                                📊 Base distribution (all grids visible)
+                <div className="status-details">
+                    {/* Grid data indicators */}
+                    {enhancedGridData && (
+                        <>
+                            <span className="pollutant-indicator">
+                                🌫️ {enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name}
                             </span>
-                        )}
-                    </div>
-                )}
+                            {selectedSources.length > 0 && (
+                                <>
+                                    <span className="sources-indicator">
+                                        🏭 {selectedSources.length} source{selectedSources.length !== 1 ? 's' : ''}
+                                    </span>
+                                    <span className="grids-indicator">
+                                        📊 {visibleGridCount} grid{visibleGridCount !== 1 ? 's' : ''} visible
+                                    </span>
+                                </>
+                            )}
+                            {selectedSources.length === 0 && (
+                                <span className="base-layer-indicator">
+                                    📊 Base distribution (all grids visible)
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {/* Sensor indicators */}
+                    {showSensors && sensorStats && (
+                        <>
+                            <span className="sensor-indicator">
+                                📡 {sensorStats.total} station{sensorStats.total !== 1 ? 's' : ''}
+                            </span>
+                            <span className="sensor-aqi-indicator">
+                                🎯 AQI: {sensorStats.minAQI}-{sensorStats.maxAQI} (avg: {sensorStats.avgAQI})
+                            </span>
+                        </>
+                    )}
+
+                    {/* Display options indicators */}
+                    {sensorDisplayOptions && (
+                        <>
+                            {sensorDisplayOptions.showLabels && (
+                                <span className="option-indicator">
+                                    🏷️ Labels
+                                </span>
+                            )}
+                            {sensorDisplayOptions.showValues && (
+                                <span className="option-indicator">
+                                    🔢 Values
+                                </span>
+                            )}
+                            {sensorDisplayOptions.clusterNearby && (
+                                <span className="option-indicator">
+                                    🔗 Clustered
+                                </span>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
             <div ref={mapRef} className="map" />
@@ -213,8 +300,21 @@ const MapContainer = ({
                 />
             )}
 
-            {/* Quick Instructions Overlay - only show if no grid data available */}
-            {!enhancedGridData && (
+            {/* Sensor Markers Layer */}
+            {sensorData && sensorData.length > 0 && (
+                <AQIMarker
+                    sensorData={sensorData}
+                    map={mapInstanceRef.current}
+                    isVisible={showSensors}
+                    sensorFilters={sensorFilters}
+                    showLabels={sensorDisplayOptions.showLabels}
+                    showValues={sensorDisplayOptions.showValues}
+                    clusterNearby={sensorDisplayOptions.clusterNearby}
+                />
+            )}
+
+            {/* Quick Instructions Overlay - only show if no data available */}
+            {!enhancedGridData && sensorData.length === 0 && (
                 <div className="instructions-overlay">
                     <div className="instructions-content">
                         <h3>🌍 Air Quality Analysis</h3>
@@ -232,11 +332,26 @@ const MapContainer = ({
                                 <span className="step-number">3</span>
                                 <span className="step-text">Use filter panel to analyze sources</span>
                             </div>
+                            <div className="instruction-step">
+                                <span className="step-number">4</span>
+                                <span className="step-text">Sensor stations show real measurements</span>
+                            </div>
                         </div>
                         <p className="instructions-note">
-                            Grid colors show pollutant levels, opacity shows source contribution intensity
+                            Grid colors show pollutant levels, sensor markers show station data
                         </p>
                     </div>
+                </div>
+            )}
+
+            {/* Enhanced Instructions for Data Available */}
+            {(enhancedGridData || sensorData.length > 0) && (
+                <div className="data-available-info">
+                    {!filtersVisible && (
+                        <div className="quick-hint">
+                            <span className="hint-text">💡 Click the arrow (←) to access filters and analyze pollution sources</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

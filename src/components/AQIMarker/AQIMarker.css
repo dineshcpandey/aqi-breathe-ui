@@ -1,0 +1,400 @@
+/* src/components/AQIMarker/AQIMarker.css */
+
+/* AQI Marker Wrapper */
+.aqi-marker-wrapper {
+    /* Override default leaflet marker styles */
+    background: none !important;
+    border: none !important;
+}
+
+/* Base Sensor Marker Styles */
+.sensor-marker {
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    color: white;
+    min-width: 28px;
+    min-height: 28px;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    z-index: 500;
+}
+
+.sensor-marker:hover {
+    transform: scale(1.15);
+    z-index: 1000 !important;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
+    border-width: 3px;
+}
+
+/* Source-specific marker styles */
+.sensor-marker.construction {
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+    border-color: #DEB887;
+}
+
+.sensor-marker.vehicle {
+    background: linear-gradient(135deg, #DC143C 0%, #B22222 100%);
+    border-color: #FFB6C1;
+}
+
+.sensor-marker.dust {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+    border-color: #F0E68C;
+}
+
+.sensor-marker.industrial {
+    background: linear-gradient(135deg, #696969 0%, #2F4F4F 100%);
+    border-color: #D3D3D3;
+}
+
+.sensor-marker.residential {
+    background: linear-gradient(135deg, #228B22 0%, #006400 100%);
+    border-color: #90EE90;
+}
+
+/* Clustered marker styles */
+.sensor-marker.clustered {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-color: #87CEEB;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 35px;
+    min-height: 35px;
+}
+
+/* Marker labels */
+.sensor-marker-label {
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(44, 62, 80, 0.95);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1001;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sensor-marker:hover .sensor-marker-label {
+    opacity: 1;
+    bottom: -26px;
+}
+
+/* Cluster group marker wrapper */
+.sensor-cluster-marker {
+    background: none !important;
+    border: none !important;
+}
+
+/* Sensor Popup Styles */
+.sensor-popup {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-width: 300px;
+    max-width: 380px;
+    line-height: 1.5;
+}
+
+.sensor-popup h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 8px;
+}
+
+.sensor-type-badge {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+/* Sensor Status */
+.sensor-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 10px 0;
+    border-left: 4px solid currentColor;
+}
+
+.sensor-status.moderate {
+    background: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+}
+
+.sensor-status.high {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.sensor-status.very_high {
+    background: rgba(142, 68, 173, 0.1);
+    color: #8e44ad;
+}
+
+.sensor-status.hazardous {
+    background: rgba(123, 36, 28, 0.1);
+    color: #7b241c;
+}
+
+/* Reading Grids */
+.sensor-readings,
+.env-readings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.reading-item {
+    background: rgba(236, 240, 241, 0.7);
+    padding: 8px 10px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.reading-item:hover {
+    background: rgba(52, 152, 219, 0.1);
+    border-color: rgba(52, 152, 219, 0.2);
+    transform: translateY(-1px);
+}
+
+.reading-item.primary {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(41, 128, 185, 0.1) 100%);
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.reading-item.primary:hover {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.25) 0%, rgba(41, 128, 185, 0.2) 100%);
+}
+
+.reading-item.small {
+    padding: 6px 8px;
+}
+
+.reading-label {
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reading-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.reading-item.primary .reading-value {
+    font-size: 1.1rem;
+}
+
+/* Environmental Data Section */
+.environmental-data {
+    margin: 16px 0;
+    padding: 12px;
+    background: rgba(46, 204, 113, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid #27ae60;
+}
+
+.environmental-data h4 {
+    margin: 0 0 10px 0;
+    color: #27ae60;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sensor Description */
+.sensor-description {
+    margin: 12px 0;
+    padding: 10px;
+    background: rgba(241, 196, 15, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid #f1c40f;
+}
+
+.sensor-description p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #34495e;
+    line-height: 1.4;
+}
+
+/* Sensor Metadata */
+.sensor-metadata {
+    border-top: 2px solid #ecf0f1;
+    padding-top: 10px;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sensor-coordinates {
+    font-family: 'Courier New', monospace;
+    background: rgba(52, 73, 94, 0.05);
+    color: #2c3e50;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid rgba(52, 73, 94, 0.1);
+}
+
+.sensor-timestamp {
+    font-size: 0.75rem;
+    color: #95a5a6;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .sensor-popup {
+        min-width: 260px;
+        max-width: 300px;
+    }
+
+    .sensor-popup h3 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .sensor-readings,
+    .env-readings {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .reading-item {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+    }
+
+    .reading-label {
+        font-size: 0.7rem;
+    }
+
+    .reading-value {
+        font-size: 0.8rem;
+    }
+
+    .sensor-marker-label {
+        font-size: 8px;
+        padding: 2px 6px;
+        max-width: 100px;
+    }
+}
+
+/* Animation for marker appearance */
+@keyframes markerAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.sensor-marker {
+    animation: markerAppear 0.3s ease-out;
+}
+
+/* Pulse animation for high AQI markers */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(231, 76, 60, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(231, 76, 60, 0);
+    }
+
+    100% {
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(231, 76, 60, 0);
+    }
+}
+
+/* Apply pulse to high AQI markers */
+.sensor-marker[style*="rgb(255, 0, 0)"],
+.sensor-marker[style*="#ff0000"],
+.sensor-marker[style*="#8f3f97"],
+.sensor-marker[style*="#7e0023"] {
+    animation: markerAppear 0.3s ease-out, pulse 2s infinite;
+}
+
+/* Cluster marker styles */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+    background-color: rgba(52, 152, 219, 0.6) !important;
+    border: 2px solid rgba(52, 152, 219, 0.8) !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+    background-color: rgba(52, 152, 219, 0.8) !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* High-contrast mode support */
+@media (prefers-contrast: high) {
+    .sensor-marker {
+        border-width: 3px;
+        border-color: white !important;
+    }
+
+    .reading-item {
+        border: 2px solid #2c3e50;
+    }
+}

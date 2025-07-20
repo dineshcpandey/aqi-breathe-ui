@@ -1,9 +1,11 @@
+// src/App.js - Updated with Sensor Integration
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
 import EnhancedFilterPane from './components/FilterPane/EnhancedFilterPane';
 import { useFilters } from './hooks/useFilters';
 import { generateSampleEnhancedGridData, POLLUTANT_COLOR_SCHEMES, POLLUTION_SOURCES } from './utils/enhancedGridGenerator';
+import { anandViharAQIData } from './utils/dummyData'; // Import sensor data
 import './App.css';
 
 function App() {
@@ -13,24 +15,43 @@ function App() {
   const [showDataLayer, setShowDataLayer] = useState(false);
   const [selectedPollutant, setSelectedPollutant] = useState('aqi');
 
-  // Enhanced filters hook
+  // Enhanced filters hook with sensor support
   const {
     filters,
+    sensorFilters,
+    showSensors,
     isFilterPaneVisible,
     handleFilterChange,
+    handleSensorFilterChange,
+    toggleSensors,
     toggleFilterPane,
-    getActiveFilters
+    getActiveFilters,
+    getActiveSensorFilters,
+    getFilterStats
   } = useFilters();
 
-  // Load enhanced grid data on component mount
+  // Load enhanced grid data and sensor data on component mount
   useEffect(() => {
-    console.log('=== App: Loading enhanced grid data ===');
-    const data = generateSampleEnhancedGridData();
-    setEnhancedGridData(data);
+    console.log('=== App: Loading enhanced grid data and sensor data ===');
 
-    console.log(`Generated ${data.grids.length} enhanced grid cells`);
-    console.log('Enhanced data metadata:', data.metadata);
-    console.log('Sample grid with contributions:', data.grids[0]);
+    // Load grid data
+    const gridData = generateSampleEnhancedGridData();
+    setEnhancedGridData(gridData);
+
+    console.log(`Generated ${gridData.grids.length} enhanced grid cells`);
+    console.log('Enhanced data metadata:', gridData.metadata);
+    console.log('Sample grid with contributions:', gridData.grids[0]);
+
+    // Log sensor data
+    console.log(`Loaded ${anandViharAQIData.length} sensor stations`);
+    console.log('Sample sensor data:', anandViharAQIData[0]);
+
+    // Group sensors by source for debugging
+    const sensorsBySource = anandViharAQIData.reduce((acc, sensor) => {
+      acc[sensor.source] = (acc[sensor.source] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('Sensors by source:', sensorsBySource);
   }, []);
 
   // Process filtered data and calculate statistics
@@ -38,7 +59,8 @@ function App() {
     selectedSources,
     pollutantStats,
     sourceStats,
-    visibleGridCount
+    visibleGridCount,
+    filteredSensorData
   } = React.useMemo(() => {
     console.log('=== App: Recomputing filtered data ===');
 
@@ -48,14 +70,17 @@ function App() {
         selectedSources: [],
         pollutantStats: {},
         sourceStats: {},
-        visibleGridCount: 0
+        visibleGridCount: 0,
+        filteredSensorData: []
       };
     }
 
     const activeFilters = getActiveFilters();
     const activeSources = activeFilters.sources || [];
+    const activeSensorFilters = getActiveSensorFilters();
 
     console.log('Active source filters:', activeSources);
+    console.log('Active sensor filters:', activeSensorFilters);
     console.log('Selected pollutant:', selectedPollutant);
 
     // Calculate pollutant statistics across all grids
@@ -111,18 +136,39 @@ function App() {
       });
     }
 
+    // Filter sensor data based on active sensor filters
+    let processedSensorData = [...anandViharAQIData];
+
+    // Apply source filters
+    if (activeSensorFilters.source && Object.keys(activeSensorFilters.source).length > 0) {
+      const activeSourceTypes = Object.keys(activeSensorFilters.source);
+      processedSensorData = processedSensorData.filter(sensor =>
+        activeSourceTypes.includes(sensor.source)
+      );
+    }
+
+    // Apply severity filters
+    if (activeSensorFilters.severity && Object.keys(activeSensorFilters.severity).length > 0) {
+      const activeSeverityTypes = Object.keys(activeSensorFilters.severity);
+      processedSensorData = processedSensorData.filter(sensor =>
+        activeSeverityTypes.includes(sensor.severity)
+      );
+    }
+
     console.log('Calculated statistics:');
     console.log('- Pollutant stats:', pollutantStatistics);
     console.log('- Source stats:', sourceStatistics);
     console.log('- Visible grids:', visibleCount);
+    console.log('- Filtered sensors:', processedSensorData.length);
 
     return {
       selectedSources: activeSources,
       pollutantStats: pollutantStatistics,
       sourceStats: sourceStatistics,
-      visibleGridCount: visibleCount
+      visibleGridCount: visibleCount,
+      filteredSensorData: processedSensorData
     };
-  }, [enhancedGridData, getActiveFilters, selectedPollutant]);
+  }, [enhancedGridData, getActiveFilters, getActiveSensorFilters, selectedPollutant]);
 
   // Auto-enable data layer when pollutant is available (not just sources)
   useEffect(() => {
@@ -138,15 +184,22 @@ function App() {
     setSelectedPollutant(newPollutant);
   };
 
+  // Get filter statistics for display
+  const filterStats = getFilterStats();
+
   // Debug: Log key state changes
   useEffect(() => {
     console.log('=== App State Update ===');
     console.log('Selected Pollutant:', selectedPollutant);
     console.log('Selected Sources:', selectedSources);
     console.log('Show Data Layer:', showDataLayer);
+    console.log('Show Sensors:', showSensors);
     console.log('Visible Grids:', visibleGridCount);
+    console.log('Filtered Sensors:', filteredSensorData.length);
     console.log('Filter Pane Visible:', isFilterPaneVisible);
-  }, [selectedPollutant, selectedSources, showDataLayer, visibleGridCount, isFilterPaneVisible]);
+    console.log('Filter Stats:', filterStats);
+  }, [selectedPollutant, selectedSources, showDataLayer, showSensors, visibleGridCount,
+    filteredSensorData.length, isFilterPaneVisible, filterStats]);
 
   return (
     <div className="app">
@@ -161,6 +214,12 @@ function App() {
         onPollutantChange={handlePollutantChange}
         pollutantStats={pollutantStats}
         sourceStats={sourceStats}
+        // New sensor-related props
+        sensorData={anandViharAQIData}
+        showSensors={showSensors}
+        onSensorToggle={toggleSensors}
+        sensorFilters={sensorFilters}
+        onSensorFilterChange={handleSensorFilterChange}
       />
 
       <MapContainer
@@ -175,6 +234,11 @@ function App() {
         sourceStats={sourceStats}
         filtersVisible={isFilterPaneVisible}
         visibleGridCount={visibleGridCount}
+        // New sensor-related props
+        sensorData={filteredSensorData}
+        showSensors={showSensors}
+        sensorFilters={sensorFilters}
+        sensorDisplayOptions={sensorFilters.options}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-// src/App.js - Updated with Sensor Integration
+// src/App.js - Updated with Select Option Support
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
@@ -13,7 +13,7 @@ function App() {
   const [enhancedGridData, setEnhancedGridData] = useState(null);
   const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
   const [showDataLayer, setShowDataLayer] = useState(false);
-  const [selectedPollutant, setSelectedPollutant] = useState('aqi');
+  const [selectedPollutant, setSelectedPollutant] = useState('select'); // Changed default to 'select'
 
   // Enhanced filters hook with sensor support
   const {
@@ -83,26 +83,28 @@ function App() {
     console.log('Active sensor filters:', activeSensorFilters);
     console.log('Selected pollutant:', selectedPollutant);
 
-    // Calculate pollutant statistics across all grids
+    // Calculate pollutant statistics across all grids (only if pollutant is not 'select')
     const pollutantStatistics = {};
-    Object.keys(POLLUTANT_COLOR_SCHEMES).forEach(pollutant => {
-      const values = enhancedGridData.grids
-        .map(grid => grid[pollutant])
-        .filter(v => v !== undefined && v !== null);
+    if (selectedPollutant !== 'select') {
+      Object.keys(POLLUTANT_COLOR_SCHEMES).forEach(pollutant => {
+        const values = enhancedGridData.grids
+          .map(grid => grid[pollutant])
+          .filter(v => v !== undefined && v !== null);
 
-      if (values.length > 0) {
-        pollutantStatistics[pollutant] = {
-          min: Math.round(Math.min(...values) * 100) / 100,
-          max: Math.round(Math.max(...values) * 100) / 100,
-          avg: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100,
-          count: values.length
-        };
-      }
-    });
+        if (values.length > 0) {
+          pollutantStatistics[pollutant] = {
+            min: Math.round(Math.min(...values) * 100) / 100,
+            max: Math.round(Math.max(...values) * 100) / 100,
+            avg: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100,
+            count: values.length
+          };
+        }
+      });
+    }
 
-    // Calculate source contribution statistics for selected pollutant
+    // Calculate source contribution statistics for selected pollutant (only if not 'select')
     const sourceStatistics = {};
-    if (activeSources.length > 0) {
+    if (selectedPollutant !== 'select' && activeSources.length > 0) {
       activeSources.forEach(source => {
         const contributions = enhancedGridData.grids
           .map(grid => grid.sourceContributions?.[selectedPollutant]?.[source])
@@ -119,21 +121,23 @@ function App() {
       });
     }
 
-    // Count grids that would be visible
+    // Count grids that would be visible (only if pollutant is not 'select')
     let visibleCount = 0;
-    if (activeSources.length === 0) {
-      // When no sources selected, all grids are visible (showing base pollutant)
-      visibleCount = enhancedGridData.grids.length;
-    } else {
-      // When sources are selected, count grids with contributions
-      enhancedGridData.grids.forEach(grid => {
-        const totalContribution = activeSources.reduce((total, source) => {
-          return total + (grid.sourceContributions?.[selectedPollutant]?.[source] || 0);
-        }, 0);
-        if (totalContribution > 0) {
-          visibleCount++;
-        }
-      });
+    if (selectedPollutant !== 'select') {
+      if (activeSources.length === 0) {
+        // When no sources selected, all grids are visible (showing base pollutant)
+        visibleCount = enhancedGridData.grids.length;
+      } else {
+        // When sources are selected, count grids with contributions
+        enhancedGridData.grids.forEach(grid => {
+          const totalContribution = activeSources.reduce((total, source) => {
+            return total + (grid.sourceContributions?.[selectedPollutant]?.[source] || 0);
+          }, 0);
+          if (totalContribution > 0) {
+            visibleCount++;
+          }
+        });
+      }
     }
 
     // Filter sensor data based on active sensor filters
@@ -170,13 +174,20 @@ function App() {
     };
   }, [enhancedGridData, getActiveFilters, getActiveSensorFilters, selectedPollutant]);
 
-  // Auto-enable data layer when pollutant is available (not just sources)
+  // Auto-enable data layer when pollutant is selected (not 'select')
   useEffect(() => {
-    if (enhancedGridData && !showDataLayer) {
-      console.log('Auto-enabling data layer - enhanced grid data available');
+    if (selectedPollutant === 'select') {
+      // Hide data layer when 'select' is chosen
+      if (showDataLayer) {
+        console.log('Hiding data layer - no pollutant selected');
+        setShowDataLayer(false);
+      }
+    } else if (enhancedGridData && !showDataLayer) {
+      // Show data layer when a pollutant is selected
+      console.log('Auto-enabling data layer - pollutant selected:', selectedPollutant);
       setShowDataLayer(true);
     }
-  }, [enhancedGridData, showDataLayer]);
+  }, [selectedPollutant, enhancedGridData, showDataLayer]);
 
   // Handle pollutant change
   const handlePollutantChange = (newPollutant) => {

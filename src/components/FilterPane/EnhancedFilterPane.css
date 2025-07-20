@@ -1428,3 +1428,86 @@
     font-style: italic;
     color: #95a5a6;
 }
+
+
+/* No Pollutant Selected Message */
+.no-pollutant-selected {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(52, 152, 219, 0.05);
+    border: 1px solid rgba(52, 152, 219, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+}
+
+.no-pollutant-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.info-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.no-pollutant-message p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #2980b9;
+    line-height: 1.4;
+}
+
+/* Enhanced pollutant select styling */
+.pollutant-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.pollutant-select:hover,
+.pollutant-select:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Special styling for the "select" option */
+.pollutant-select option[value="select"] {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* Update button disabled state */
+.clear-all-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.clear-all-btn:disabled:hover {
+    background: #e74c3c;
+    color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .no-pollutant-message {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+    }
+
+    .info-icon {
+        align-self: center;
+    }
+}

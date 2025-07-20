@@ -1,4 +1,4 @@
-// src/hooks/useFilters.js - Updated with Sensor Support
+// src/hooks/useFilters.js - Updated with Select Option Support
 import { useState, useCallback } from 'react';
 
 export const useFilters = (initialFilters = {}) => {
@@ -33,7 +33,7 @@ export const useFilters = (initialFilters = {}) => {
         }
     });
 
-    const [showSensors, setShowSensors] = useState(true);
+    const [showSensors, setShowSensors] = useState(false);
     const [isFilterPaneVisible, setIsFilterPaneVisible] = useState(false);
 
     const handleFilterChange = useCallback((category, filterId) => {

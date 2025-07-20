@@ -1,9 +1,9 @@
-// src/components/MapContainer/MapContainer.jsx - Updated with Sensor Integration
+// src/components/MapContainer/MapContainer.jsx - Updated with Select Option Support
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import LayerControls from '../LayerControls/LayerControls';
 import EnhancedGridLayer from '../GridLayer/EnhancedGridLayer';
-import AQIMarker from '../AQIMarker/AQIMarker'; // New sensor marker component
+import AQIMarker from '../AQIMarker/AQIMarker';
 import { baseLayers } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
 import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
@@ -19,7 +19,7 @@ L.Icon.Default.mergeOptions({
 
 const MapContainer = ({
     enhancedGridData,
-    selectedPollutant = 'aqi',
+    selectedPollutant = 'select',  // Updated default
     selectedSources = [],
     selectedMapStyle,
     showDataLayer,
@@ -29,7 +29,7 @@ const MapContainer = ({
     sourceStats,
     filtersVisible,
     visibleGridCount = 0,
-    // New sensor-related props
+    // Sensor-related props
     sensorData = [],
     showSensors = true,
     sensorFilters = {},
@@ -153,18 +153,24 @@ const MapContainer = ({
 
     // Create status message for current selection
     const getStatusMessage = () => {
-        const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
-
         let message = '';
 
-        // Grid layer status
-        if (selectedSources.length === 0) {
-            message = `Showing base ${pollutantName} distribution`;
+        // Handle 'select' case
+        if (selectedPollutant === 'select') {
+            message = 'No pollutant layer selected. Choose a pollutant from the filter panel to display grid visualization';
         } else {
-            const sourceNames = selectedSources.map(source =>
-                enhancedGridData?.pollutionSources?.[source]?.name || source
-            ).join(' + ');
-            message = `Showing ${pollutantName} colored by concentration, opacity by ${sourceNames} contribution (${visibleGridCount} grids visible)`;
+            // Original logic for when a pollutant is selected
+            const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
+
+            // Grid layer status
+            if (selectedSources.length === 0) {
+                message = `Showing base ${pollutantName} distribution`;
+            } else {
+                const sourceNames = selectedSources.map(source =>
+                    enhancedGridData?.pollutionSources?.[source]?.name || source
+                ).join(' + ');
+                message = `Showing ${pollutantName} colored by concentration, opacity by ${sourceNames} contribution (${visibleGridCount} grids visible)`;
+            }
         }
 
         // Add sensor status
@@ -228,8 +234,8 @@ const MapContainer = ({
                     {getStatusMessage()}
                 </div>
                 <div className="status-details">
-                    {/* Grid data indicators */}
-                    {enhancedGridData && (
+                    {/* Grid data indicators - only show if pollutant is selected */}
+                    {enhancedGridData && selectedPollutant !== 'select' && (
                         <>
                             <span className="pollutant-indicator">
                                 🌫️ {enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name}
@@ -250,6 +256,13 @@ const MapContainer = ({
                                 </span>
                             )}
                         </>
+                    )}
+
+                    {/* Show message when no pollutant is selected */}
+                    {selectedPollutant === 'select' && (
+                        <span className="no-pollutant-indicator">
+                            💡 Select a pollutant to view grid analysis
+                        </span>
                     )}
 
                     {/* Sensor indicators */}
@@ -289,8 +302,8 @@ const MapContainer = ({
 
             <div ref={mapRef} className="map" />
 
-            {/* Enhanced Grid Visualization Layer */}
-            {enhancedGridData && (
+            {/* Enhanced Grid Visualization Layer - only render if pollutant is selected */}
+            {enhancedGridData && selectedPollutant !== 'select' && (
                 <EnhancedGridLayer
                     gridData={enhancedGridData}
                     selectedPollutant={selectedPollutant}
@@ -313,8 +326,8 @@ const MapContainer = ({
                 />
             )}
 
-            {/* Quick Instructions Overlay - only show if no data available */}
-            {!enhancedGridData && sensorData.length === 0 && (
+            {/* Instructions Overlay */}
+            {selectedPollutant === 'select' && !enhancedGridData && sensorData.length === 0 && (
                 <div className="instructions-overlay">
                     <div className="instructions-content">
                         <h3>🌍 Air Quality Analysis</h3>
@@ -326,11 +339,11 @@ const MapContainer = ({
                             </div>
                             <div className="instruction-step">
                                 <span className="step-number">2</span>
-                                <span className="step-text">Map will show pollutant distribution</span>
+                                <span className="step-text">Select a pollutant to display grid analysis</span>
                             </div>
                             <div className="instruction-step">
                                 <span className="step-number">3</span>
-                                <span className="step-text">Use filter panel to analyze sources</span>
+                                <span className="step-text">Use filter panel to analyze pollution sources</span>
                             </div>
                             <div className="instruction-step">
                                 <span className="step-number">4</span>
@@ -338,18 +351,18 @@ const MapContainer = ({
                             </div>
                         </div>
                         <p className="instructions-note">
-                            Grid colors show pollutant levels, sensor markers show station data
+                            Grid visualization will appear once you select a pollutant
                         </p>
                     </div>
                 </div>
             )}
 
-            {/* Enhanced Instructions for Data Available */}
-            {(enhancedGridData || sensorData.length > 0) && (
+            {/* Enhanced Instructions when Select is chosen but data is available */}
+            {selectedPollutant === 'select' && (enhancedGridData || sensorData.length > 0) && (
                 <div className="data-available-info">
                     {!filtersVisible && (
                         <div className="quick-hint">
-                            <span className="hint-text">💡 Click the arrow (←) to access filters and analyze pollution sources</span>
+                            <span className="hint-text">💡 Click the arrow (←) to open the filter panel and select a pollutant for grid analysis</span>
                         </div>
                     )}
                 </div>

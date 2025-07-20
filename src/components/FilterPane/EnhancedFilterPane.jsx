@@ -1,4 +1,4 @@
-// src/components/FilterPane/EnhancedFilterPane.jsx - Updated with Sensors Section
+// src/components/FilterPane/EnhancedFilterPane.jsx - Updated with Select Option
 import React, { useState } from 'react';
 import './EnhancedFilterPane.css';
 import { POLLUTANT_COLOR_SCHEMES, POLLUTION_SOURCES } from '../../utils/enhancedGridGenerator';
@@ -8,11 +8,11 @@ const EnhancedFilterPane = ({
     onFilterChange,
     isVisible,
     onToggleVisibility,
-    selectedPollutant = 'aqi',
+    selectedPollutant = 'select',  // Changed default to 'select'
     onPollutantChange,
     pollutantStats = {},
     sourceStats = {},
-    // New sensor-related props
+    // Sensor-related props
     sensorData = [],
     showSensors = true,
     onSensorToggle,
@@ -22,7 +22,7 @@ const EnhancedFilterPane = ({
     const [expandedGroups, setExpandedGroups] = useState({
         pollutants: true,
         sources: true,
-        sensors: true, // New sensors section
+        sensors: true,
         colorScale: true,
         statistics: true
     });
@@ -54,15 +54,15 @@ const EnhancedFilterPane = ({
             }
         });
 
-        // Reset pollutant to AQI if not already
-        if (selectedPollutant !== 'aqi') {
-            onPollutantChange('aqi');
+        // Reset pollutant to Select
+        if (selectedPollutant !== 'select') {
+            onPollutantChange('select');
         }
     };
 
     // Get active source count
     const activeSourceCount = Object.values(filters.sources || {}).filter(Boolean).length;
-    const pollutantScheme = POLLUTANT_COLOR_SCHEMES[selectedPollutant];
+    const pollutantScheme = selectedPollutant !== 'select' ? POLLUTANT_COLOR_SCHEMES[selectedPollutant] : null;
 
     // Calculate sensor statistics
     const sensorStats = React.useMemo(() => {
@@ -138,6 +138,8 @@ const EnhancedFilterPane = ({
                                         onChange={(e) => onPollutantChange(e.target.value)}
                                         className="pollutant-select"
                                     >
+                                        {/* Add Select option at the top */}
+                                        <option value="select">Select a pollutant...</option>
                                         {Object.entries(POLLUTANT_COLOR_SCHEMES).map(([key, scheme]) => (
                                             <option key={key} value={key}>
                                                 {scheme.name} ({scheme.unit})
@@ -145,8 +147,8 @@ const EnhancedFilterPane = ({
                                         ))}
                                     </select>
 
-                                    {/* Current Pollutant Stats */}
-                                    {pollutantStats[selectedPollutant] && (
+                                    {/* Current Pollutant Stats - only show if not 'select' */}
+                                    {selectedPollutant !== 'select' && pollutantStats[selectedPollutant] && (
                                         <div className="pollutant-stats-mini">
                                             <div className="stat-row">
                                                 <span className="stat-label">Range:</span>
@@ -162,12 +164,22 @@ const EnhancedFilterPane = ({
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Show message when Select is chosen */}
+                                    {selectedPollutant === 'select' && (
+                                        <div className="no-pollutant-selected">
+                                            <div className="no-pollutant-message">
+                                                <span className="info-icon">ℹ️</span>
+                                                <p>Select a pollutant to display grid visualization on the map.</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* NEW SENSORS SECTION */}
+                    {/* SENSORS SECTION */}
                     <div className="filter-group">
                         <div
                             className="group-header"
@@ -334,8 +346,8 @@ const EnhancedFilterPane = ({
                         )}
                     </div>
 
-                    {/* COLOR SCALE SECTION */}
-                    {pollutantScheme && (
+                    {/* COLOR SCALE SECTION - only show if pollutant is selected */}
+                    {pollutantScheme && selectedPollutant !== 'select' && (
                         <div className="filter-group">
                             <div
                                 className="group-header"
@@ -375,93 +387,95 @@ const EnhancedFilterPane = ({
                         </div>
                     )}
 
-                    {/* SOURCES SECTION - Same as before */}
-                    <div className="filter-group">
-                        <div
-                            className="group-header"
-                            onClick={() => toggleGroup('sources')}
-                        >
-                            <span className="group-icon">🏭</span>
-                            <span className="group-title">POLLUTION SOURCES</span>
-                            {activeSourceCount > 0 && (
-                                <span className="active-count">{activeSourceCount}</span>
-                            )}
-                            <span className={`expand-icon ${expandedGroups.sources ? 'expanded' : ''}`}>▼</span>
-                        </div>
-
-                        {expandedGroups.sources && (
-                            <div className="group-items">
-                                <div className="sources-info">
-                                    <p>Select sources to show their contribution intensity to {pollutantScheme?.name}:</p>
-                                </div>
-
-                                {Object.entries(POLLUTION_SOURCES).map(([sourceKey, source]) => {
-                                    const isActive = filters.sources?.[sourceKey] || false;
-                                    const stats = sourceStats[sourceKey];
-
-                                    return (
-                                        <div
-                                            key={sourceKey}
-                                            className={`filter-item source-item ${isActive ? 'active' : ''}`}
-                                            onClick={() => handleFilterToggle('sources', sourceKey)}
-                                        >
-                                            <div className="source-header">
-                                                <div className="source-main">
-                                                    <div className="filter-icon" style={{ color: source.color }}>
-                                                        {source.icon}
-                                                    </div>
-                                                    <div className="source-info">
-                                                        <span className="filter-label">{source.name}</span>
-                                                        <span className="source-description">{source.description}</span>
-                                                    </div>
-                                                    <div className={`toggle-switch ${isActive ? 'on' : 'off'}`}>
-                                                        <div className="toggle-slider"></div>
-                                                    </div>
-                                                </div>
-
-                                                {isActive && stats && (
-                                                    <div className="source-contribution-stats">
-                                                        <div className="contribution-info">
-                                                            <span className="contribution-range">
-                                                                {stats.min}%-{stats.max}% contribution
-                                                            </span>
-                                                            <span className="contribution-avg">
-                                                                avg: {stats.avg}%
-                                                            </span>
-                                                        </div>
-                                                        <div className="contribution-bar">
-                                                            <div
-                                                                className="contribution-fill"
-                                                                style={{
-                                                                    width: `${Math.min(stats.avg, 100)}%`,
-                                                                    backgroundColor: source.color,
-                                                                    opacity: 0.7
-                                                                }}
-                                                            ></div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Intensity Explanation */}
+                    {/* SOURCES SECTION - only show if pollutant is selected */}
+                    {selectedPollutant !== 'select' && (
+                        <div className="filter-group">
+                            <div
+                                className="group-header"
+                                onClick={() => toggleGroup('sources')}
+                            >
+                                <span className="group-icon">🏭</span>
+                                <span className="group-title">POLLUTION SOURCES</span>
                                 {activeSourceCount > 0 && (
-                                    <div className="intensity-explanation">
-                                        <h5>💡 How Intensity Works:</h5>
-                                        <p><strong>Color:</strong> {pollutantScheme?.name} concentration level</p>
-                                        <p><strong>Opacity:</strong> Combined contribution from selected sources</p>
-                                        {activeSourceCount > 1 && (
-                                            <p><strong>Multiple sources:</strong> Contributions are added together</p>
-                                        )}
-                                    </div>
+                                    <span className="active-count">{activeSourceCount}</span>
                                 )}
+                                <span className={`expand-icon ${expandedGroups.sources ? 'expanded' : ''}`}>▼</span>
                             </div>
-                        )}
-                    </div>
 
-                    {/* STATISTICS SECTION - Enhanced with sensor data */}
+                            {expandedGroups.sources && (
+                                <div className="group-items">
+                                    <div className="sources-info">
+                                        <p>Select sources to show their contribution intensity to {pollutantScheme?.name}:</p>
+                                    </div>
+
+                                    {Object.entries(POLLUTION_SOURCES).map(([sourceKey, source]) => {
+                                        const isActive = filters.sources?.[sourceKey] || false;
+                                        const stats = sourceStats[sourceKey];
+
+                                        return (
+                                            <div
+                                                key={sourceKey}
+                                                className={`filter-item source-item ${isActive ? 'active' : ''}`}
+                                                onClick={() => handleFilterToggle('sources', sourceKey)}
+                                            >
+                                                <div className="source-header">
+                                                    <div className="source-main">
+                                                        <div className="filter-icon" style={{ color: source.color }}>
+                                                            {source.icon}
+                                                        </div>
+                                                        <div className="source-info">
+                                                            <span className="filter-label">{source.name}</span>
+                                                            <span className="source-description">{source.description}</span>
+                                                        </div>
+                                                        <div className={`toggle-switch ${isActive ? 'on' : 'off'}`}>
+                                                            <div className="toggle-slider"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {isActive && stats && (
+                                                        <div className="source-contribution-stats">
+                                                            <div className="contribution-info">
+                                                                <span className="contribution-range">
+                                                                    {stats.min}%-{stats.max}% contribution
+                                                                </span>
+                                                                <span className="contribution-avg">
+                                                                    avg: {stats.avg}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="contribution-bar">
+                                                                <div
+                                                                    className="contribution-fill"
+                                                                    style={{
+                                                                        width: `${Math.min(stats.avg, 100)}%`,
+                                                                        backgroundColor: source.color,
+                                                                        opacity: 0.7
+                                                                    }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Intensity Explanation */}
+                                    {activeSourceCount > 0 && (
+                                        <div className="intensity-explanation">
+                                            <h5>💡 How Intensity Works:</h5>
+                                            <p><strong>Color:</strong> {pollutantScheme?.name} concentration level</p>
+                                            <p><strong>Opacity:</strong> Combined contribution from selected sources</p>
+                                            {activeSourceCount > 1 && (
+                                                <p><strong>Multiple sources:</strong> Contributions are added together</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STATISTICS SECTION */}
                     {(Object.keys(pollutantStats).length > 0 || Object.keys(sourceStats).length > 0 || sensorStats.total > 0) && (
                         <div className="filter-group">
                             <div
@@ -507,8 +521,8 @@ const EnhancedFilterPane = ({
                                             </div>
                                         )}
 
-                                        {/* Existing Pollutant Statistics */}
-                                        {Object.keys(pollutantStats).length > 0 && (
+                                        {/* Existing Pollutant Statistics - only show if pollutant selected */}
+                                        {selectedPollutant !== 'select' && Object.keys(pollutantStats).length > 0 && (
                                             <div className="stats-subsection">
                                                 <h5>🌫️ Pollutant Levels</h5>
                                                 <div className="stats-grid">
@@ -536,8 +550,8 @@ const EnhancedFilterPane = ({
                                             </div>
                                         )}
 
-                                        {/* Source Statistics */}
-                                        {Object.keys(sourceStats).length > 0 && (
+                                        {/* Source Statistics - only show if pollutant selected */}
+                                        {selectedPollutant !== 'select' && Object.keys(sourceStats).length > 0 && (
                                             <div className="stats-subsection">
                                                 <h5>🏭 Source Contributions to {pollutantScheme?.name}</h5>
                                                 <div className="source-stats-list">
@@ -582,14 +596,20 @@ const EnhancedFilterPane = ({
                         <button
                             className="clear-all-btn"
                             onClick={clearAllFilters}
-                            disabled={activeSourceCount === 0 && selectedPollutant === 'aqi' && activeSensorFilters === 0}
+                            disabled={activeSourceCount === 0 && selectedPollutant === 'select' && activeSensorFilters === 0}
                         >
                             Reset to Default
                         </button>
 
                         <div className="action-info">
                             <p>
-                                Showing <strong>{pollutantScheme?.name}</strong> with <strong>{activeSourceCount}</strong> source{activeSourceCount !== 1 ? 's' : ''} selected
+                                {selectedPollutant === 'select' ? (
+                                    'No pollutant layer selected'
+                                ) : (
+                                    <>
+                                        Showing <strong>{pollutantScheme?.name}</strong> with <strong>{activeSourceCount}</strong> source{activeSourceCount !== 1 ? 's' : ''} selected
+                                    </>
+                                )}
                                 {showSensors && <><br />+ <strong>{sensorStats.total}</strong> sensor station{sensorStats.total !== 1 ? 's' : ''}</>}
                             </p>
                         </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './SourceLegend.css';
-import { SOURCE_COLOR_SCHEMES } from '../../utils/sourceBasedGridGenerator';
+import { SOURCE_COLOR_SCHEMES } from '../../utils/enhancedGridGenerator';
 
 const SourceLegend = ({
     activeSourceFilters = [],

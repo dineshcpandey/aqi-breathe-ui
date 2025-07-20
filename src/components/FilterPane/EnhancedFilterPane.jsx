@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './FilterPane.css';
+import './EnhancedFilterPane.css';
 import { POLLUTANT_COLOR_SCHEMES, POLLUTION_SOURCES } from '../../utils/enhancedGridGenerator';
 
 const EnhancedFilterPane = ({

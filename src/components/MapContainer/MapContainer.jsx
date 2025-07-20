@@ -1,14 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import LayerControls from '../LayerControls/LayerControls';
-import { baseLayers, getAQIColor, getAQIStatus } from '../../utils/mapUtils';
+import { baseLayers } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
 import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
 import './MapContainer.css';
-import GridLayer from '../GridLayer/GridLayer';
-import Legend from '../Legend/Legend';
-import { generateSampleGridData, getDatasetStatistics } from '../../utils/gridDataGenerator';
-
+import EnhancedGridLayer from '../GridLayer/EnhancedGridLayer';
 
 // Fix for default markers in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,39 +16,40 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapContainer = ({
-    aqiData,
+    enhancedGridData,
+    selectedPollutant = 'aqi',
+    selectedSources = [],
     selectedMapStyle,
-    showAQILayer,
+    showDataLayer,
     onMapStyleChange,
-    onAQIToggle,
-    onAddAQIData
+    onDataLayerToggle,
+    pollutantStats,
+    sourceStats,
+    filtersVisible,
+    visibleGridCount = 0
 }) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
-    const aqiLayerGroupRef = useRef(null);
     const [coordinates, setCoordinates] = useState('Click on map to see coordinates');
     const [distanceMode, setDistanceMode] = useState(false);
     const [distancePoints, setDistancePoints] = useState([]);
     const distanceMarkersRef = useRef([]);
     const distanceLinesRef = useRef([]);
-    const [gridData, setGridData] = useState(null);
-    const [selectedPollutant, setSelectedPollutant] = useState('aqi');
-    const [gridStats, setGridStats] = useState(null);
 
     // Initialize map
     useEffect(() => {
         if (mapRef.current && !mapInstanceRef.current) {
+            console.log('MapContainer: Initializing map');
             mapInstanceRef.current = L.map(mapRef.current)
                 .setView(DEFAULT_MAP_CONFIG.center, DEFAULT_MAP_CONFIG.zoom);
 
             // Add default base layer
             baseLayers[selectedMapStyle].addTo(mapInstanceRef.current);
 
-            // Initialize AQI layer group
-            aqiLayerGroupRef.current = L.layerGroup();
-
             // Add click event for coordinates and distance measurement
             mapInstanceRef.current.on('click', handleMapClick);
+
+            console.log('Map initialized with center:', DEFAULT_MAP_CONFIG.center);
         }
 
         return () => {
@@ -62,17 +60,11 @@ const MapContainer = ({
         };
     }, []);
 
-    //  useEffect to load grid data:
-    useEffect(() => {
-        // Generate grid data on component mount
-        const data = generateSampleGridData();
-        setGridData(data);
-        setGridStats(getDatasetStatistics(data));
-        console.log('Grid data loaded:', data.metadata);
-    }, []);
     // Handle map style changes
     useEffect(() => {
         if (mapInstanceRef.current) {
+            console.log('MapContainer: Changing map style to', selectedMapStyle);
+
             // Remove all base layers
             Object.values(baseLayers).forEach(layer => {
                 mapInstanceRef.current.removeLayer(layer);
@@ -82,18 +74,6 @@ const MapContainer = ({
             baseLayers[selectedMapStyle].addTo(mapInstanceRef.current);
         }
     }, [selectedMapStyle]);
-
-    // Handle AQI layer toggle
-    useEffect(() => {
-        if (mapInstanceRef.current && aqiLayerGroupRef.current) {
-            if (showAQILayer) {
-                createAQILayer();
-                mapInstanceRef.current.addLayer(aqiLayerGroupRef.current);
-            } else {
-                mapInstanceRef.current.removeLayer(aqiLayerGroupRef.current);
-            }
-        }
-    }, [showAQILayer, aqiData]);
 
     const handleMapClick = (e) => {
         const lat = e.latlng.lat.toFixed(6);
@@ -138,36 +118,6 @@ const MapContainer = ({
         }
     };
 
-    const createAQILayer = () => {
-        if (!aqiLayerGroupRef.current) return;
-
-        aqiLayerGroupRef.current.clearLayers();
-
-        aqiData.forEach(point => {
-            const color = getAQIColor(point.aqi);
-
-            const aqiIcon = L.divIcon({
-                className: 'aqi-marker',
-                html: `<div class="aqi-marker-icon" style="background-color: ${color};">${point.aqi}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
-
-            const marker = L.marker([point.lat, point.lng], { icon: aqiIcon });
-
-            marker.bindPopup(`
-        <div class="aqi-popup">
-          <h3>${point.station}</h3>
-          <p><strong>AQI:</strong> <span style="color: ${color};">${point.aqi}</span></p>
-          <p><strong>Status:</strong> ${getAQIStatus(point.aqi)}</p>
-          <p class="coords">Lat: ${point.lat.toFixed(4)}, Lng: ${point.lng.toFixed(4)}</p>
-        </div>
-      `);
-
-            aqiLayerGroupRef.current.addLayer(marker);
-        });
-    };
-
     const toggleDistanceMode = () => {
         const newDistanceMode = !distanceMode;
         setDistanceMode(newDistanceMode);
@@ -194,56 +144,93 @@ const MapContainer = ({
         }
     };
 
+    // Create status message for current selection
+    const getStatusMessage = () => {
+        if (selectedSources.length === 0) {
+            return 'Select pollution sources from the filter panel to view data';
+        }
+
+        const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
+        const sourceNames = selectedSources.map(source =>
+            enhancedGridData?.pollutionSources?.[source]?.name || source
+        ).join(' + ');
+
+        return `Showing ${pollutantName} colored by concentration, opacity by ${sourceNames} contribution (${visibleGridCount} grids visible)`;
+    };
+
     return (
-        <div className="map-container">
+        <div className={`map-container ${filtersVisible ? 'with-filters' : ''}`}>
             <LayerControls
                 selectedMapStyle={selectedMapStyle}
                 onMapStyleChange={onMapStyleChange}
-                showAQILayer={showAQILayer}
-                onAQIToggle={onAQIToggle}
+                showAQILayer={showDataLayer}
+                onAQIToggle={onDataLayerToggle}
                 distanceMode={distanceMode}
                 onDistanceModeToggle={toggleDistanceMode}
                 coordinates={coordinates}
             />
 
+            {/* Status Information */}
+            <div className="map-status-bar">
+                <div className="status-message">
+                    {getStatusMessage()}
+                </div>
+                {selectedSources.length > 0 && (
+                    <div className="status-details">
+                        <span className="pollutant-indicator">
+                            🌫️ {enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name}
+                        </span>
+                        <span className="sources-indicator">
+                            🏭 {selectedSources.length} source{selectedSources.length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="grids-indicator">
+                            📊 {visibleGridCount} grid{visibleGridCount !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                )}
+            </div>
+
             <div ref={mapRef} className="map" />
 
-            {/* Grid Visualization Layer */}
-            {gridData && (
-                <GridLayer
-                    gridData={gridData}
+            {/* Enhanced Grid Visualization Layer */}
+            {enhancedGridData && (
+                <EnhancedGridLayer
+                    gridData={enhancedGridData}
                     selectedPollutant={selectedPollutant}
+                    selectedSources={selectedSources}
                     map={mapInstanceRef.current}
-                    isVisible={showAQILayer}
+                    isVisible={showDataLayer}
                 />
             )}
 
-            {/* Legend */}
-            {gridData && (
-                <Legend
-                    colorSchemes={gridData.colorSchemes}
-                    selectedPollutant={selectedPollutant}
-                    onPollutantChange={setSelectedPollutant}
-                    gridStats={gridStats}
-                />
+            {/* Quick Instructions Overlay */}
+            {selectedSources.length === 0 && (
+                <div className="instructions-overlay">
+                    <div className="instructions-content">
+                        <h3>🌍 Air Quality Analysis</h3>
+                        <p>Welcome to the enhanced pollution visualization platform!</p>
+                        <div className="instructions-steps">
+                            <div className="instruction-step">
+                                <span className="step-number">1</span>
+                                <span className="step-text">Open the filter panel (←) on the left</span>
+                            </div>
+                            <div className="instruction-step">
+                                <span className="step-number">2</span>
+                                <span className="step-text">Choose a pollutant (AQI, PM2.5, etc.)</span>
+                            </div>
+                            <div className="instruction-step">
+                                <span className="step-number">3</span>
+                                <span className="step-text">Select pollution sources to analyze</span>
+                            </div>
+                        </div>
+                        <p className="instructions-note">
+                            Grid colors show pollutant levels, opacity shows source contribution intensity
+                        </p>
+                    </div>
+                </div>
             )}
         </div>
     );
-
-    // return (
-    //     <div className="map-container">
-    //         <LayerControls
-    //             selectedMapStyle={selectedMapStyle}
-    //             onMapStyleChange={onMapStyleChange}
-    //             showAQILayer={showAQILayer}
-    //             onAQIToggle={onAQIToggle}
-    //             distanceMode={distanceMode}
-    //             onDistanceModeToggle={toggleDistanceMode}
-    //             coordinates={coordinates}
-    //         />
-    //         <div ref={mapRef} className="map" />
-    //     </div>
-    // );
 };
 
 export default MapContainer;

@@ -2,12 +2,6 @@ import { useState, useCallback } from 'react';
 
 export const useFilters = (initialFilters = {}) => {
     const [filters, setFilters] = useState({
-        airQuality: {
-            aqi: false,
-            pm25: false,
-            rh: false,
-            co: false
-        },
         sources: {
             construction: false,
             vehicle: false,
@@ -19,6 +13,9 @@ export const useFilters = (initialFilters = {}) => {
     const [isFilterPaneVisible, setIsFilterPaneVisible] = useState(false);
 
     const handleFilterChange = useCallback((category, filterId) => {
+        console.log(`useFilters: Toggling ${category}.${filterId}`);
+        console.log('Current state:', filters[category]?.[filterId]);
+
         setFilters(prev => ({
             ...prev,
             [category]: {
@@ -26,7 +23,7 @@ export const useFilters = (initialFilters = {}) => {
                 [filterId]: !prev[category][filterId]
             }
         }));
-    }, []);
+    }, [filters]);
 
     const toggleFilterPane = useCallback(() => {
         setIsFilterPaneVisible(prev => !prev);
@@ -35,12 +32,15 @@ export const useFilters = (initialFilters = {}) => {
     const getActiveFilters = useCallback(() => {
         const active = {};
         Object.keys(filters).forEach(category => {
+            const activeItems = [];
             Object.keys(filters[category]).forEach(filterId => {
                 if (filters[category][filterId]) {
-                    if (!active[category]) active[category] = [];
-                    active[category].push(filterId);
+                    activeItems.push(filterId);
                 }
             });
+            if (activeItems.length > 0) {
+                active[category] = activeItems;
+            }
         });
         return active;
     }, [filters]);

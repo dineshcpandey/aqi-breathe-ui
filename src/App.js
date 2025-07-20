@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
-import FilterPane from './components/FilterPane/FilterPane';
+import EnhancedFilterPane from './components/FilterPane/EnhancedFilterPane';
 import { useFilters } from './hooks/useFilters';
-import { generateSampleSourceGridData, applyAirQualityThresholds, getSourceStatistics } from './utils/sourceBasedGridGenerator';
+import { generateSampleEnhancedGridData, POLLUTANT_COLOR_SCHEMES, POLLUTION_SOURCES } from './utils/enhancedGridGenerator';
 import './App.css';
 
 function App() {
-  // Source-based grid data instead of point data
-  const [sourceGridData, setSourceGridData] = useState(null);
+  // Enhanced grid data with per-pollutant source contributions
+  const [enhancedGridData, setEnhancedGridData] = useState(null);
   const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
   const [showDataLayer, setShowDataLayer] = useState(false);
+  const [selectedPollutant, setSelectedPollutant] = useState('aqi');
 
+  // Enhanced filters hook
   const {
     filters,
     isFilterPaneVisible,
@@ -20,102 +22,158 @@ function App() {
     getActiveFilters
   } = useFilters();
 
-  // Load source-based grid data on component mount
+  // Load enhanced grid data on component mount
   useEffect(() => {
-    console.log('Loading source-based grid data...');
-    const data = generateSampleSourceGridData();
-    setSourceGridData(data);
+    console.log('=== App: Loading enhanced grid data ===');
+    const data = generateSampleEnhancedGridData();
+    setEnhancedGridData(data);
 
-    console.log(`Generated ${data.grids.length} grid cells with source contributions`);
-    console.log('Grid data metadata:', data.metadata);
+    console.log(`Generated ${data.grids.length} enhanced grid cells`);
+    console.log('Enhanced data metadata:', data.metadata);
+    console.log('Sample grid with contributions:', data.grids[0]);
   }, []);
 
-  // Process filtered data based on active filters
-  const { filteredGridData, activeSourceFilters, activeAirQualityFilters, sourceStats } = React.useMemo(() => {
-    if (!sourceGridData) {
+  // Process filtered data and calculate statistics
+  const {
+    selectedSources,
+    pollutantStats,
+    sourceStats,
+    visibleGridCount
+  } = React.useMemo(() => {
+    console.log('=== App: Recomputing filtered data ===');
+
+    if (!enhancedGridData) {
+      console.log('No enhanced grid data available');
       return {
-        filteredGridData: null,
-        activeSourceFilters: [],
-        activeAirQualityFilters: [],
-        sourceStats: {}
+        selectedSources: [],
+        pollutantStats: {},
+        sourceStats: {},
+        visibleGridCount: 0
       };
     }
 
     const activeFilters = getActiveFilters();
-
-    // Get active source filters
     const activeSources = activeFilters.sources || [];
-    const activeAirQuality = activeFilters.airQuality || [];
 
-    console.log('=== FILTERING DEBUG ===');
     console.log('Active source filters:', activeSources);
-    console.log('Active air quality filters:', activeAirQuality);
-    console.log('Total grid cells:', sourceGridData.grids.length);
+    console.log('Selected pollutant:', selectedPollutant);
 
-    if (activeSources.length === 0) {
-      console.log('No source filters active - showing 0 grids');
-      return {
-        filteredGridData: { ...sourceGridData, grids: [] },
-        activeSourceFilters: [],
-        activeAirQualityFilters: activeAirQuality,
-        sourceStats: {}
-      };
+    // Calculate pollutant statistics across all grids
+    const pollutantStatistics = {};
+    Object.keys(POLLUTANT_COLOR_SCHEMES).forEach(pollutant => {
+      const values = enhancedGridData.grids
+        .map(grid => grid[pollutant])
+        .filter(v => v !== undefined && v !== null);
+
+      if (values.length > 0) {
+        pollutantStatistics[pollutant] = {
+          min: Math.round(Math.min(...values) * 100) / 100,
+          max: Math.round(Math.max(...values) * 100) / 100,
+          avg: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100,
+          count: values.length
+        };
+      }
+    });
+
+    // Calculate source contribution statistics for selected pollutant
+    const sourceStatistics = {};
+    if (activeSources.length > 0) {
+      activeSources.forEach(source => {
+        const contributions = enhancedGridData.grids
+          .map(grid => grid.sourceContributions?.[selectedPollutant]?.[source])
+          .filter(c => c !== undefined && c !== null && c > 0);
+
+        if (contributions.length > 0) {
+          sourceStatistics[source] = {
+            min: Math.round(Math.min(...contributions) * 10) / 10,
+            max: Math.round(Math.max(...contributions) * 10) / 10,
+            avg: Math.round((contributions.reduce((a, b) => a + b, 0) / contributions.length) * 10) / 10,
+            count: contributions.length
+          };
+        }
+      });
     }
 
-    // Apply air quality thresholds first
-    let filteredGrids = applyAirQualityThresholds(sourceGridData.grids, activeAirQuality);
+    // Count grids that would be visible (have contributions from selected sources)
+    let visibleCount = 0;
+    if (activeSources.length > 0) {
+      enhancedGridData.grids.forEach(grid => {
+        const totalContribution = activeSources.reduce((total, source) => {
+          return total + (grid.sourceContributions?.[selectedPollutant]?.[source] || 0);
+        }, 0);
+        if (totalContribution > 0) {
+          visibleCount++;
+        }
+      });
+    }
 
-    console.log(`After air quality thresholds: ${filteredGrids.length} grids`);
-
-    // Calculate source statistics
-    const stats = getSourceStatistics(filteredGrids, activeSources);
-
-    console.log('Source statistics:', stats);
-    console.log('=== END FILTERING DEBUG ===');
+    console.log('Calculated statistics:');
+    console.log('- Pollutant stats:', pollutantStatistics);
+    console.log('- Source stats:', sourceStatistics);
+    console.log('- Visible grids:', visibleCount);
 
     return {
-      filteredGridData: { ...sourceGridData, grids: filteredGrids },
-      activeSourceFilters: activeSources,
-      activeAirQualityFilters: activeAirQuality,
-      sourceStats: stats
+      selectedSources: activeSources,
+      pollutantStats: pollutantStatistics,
+      sourceStats: sourceStatistics,
+      visibleGridCount: visibleCount
     };
-  }, [sourceGridData, getActiveFilters]);
+  }, [enhancedGridData, getActiveFilters, selectedPollutant]);
 
-  // Debug: Log when filtered data changes
+  // Auto-enable data layer when sources are selected
   useEffect(() => {
-    if (filteredGridData) {
-      console.log(`Filtered grid data changed: ${filteredGridData.grids.length} grids`);
-      console.log('Active sources:', activeSourceFilters);
-
-      // Auto-enable data layer when there are active sources
-      if (activeSourceFilters.length > 0 && !showDataLayer) {
-        console.log('Auto-enabling data layer since we have active source filters');
-        setShowDataLayer(true);
-      }
+    if (selectedSources.length > 0 && !showDataLayer) {
+      console.log('Auto-enabling data layer - sources selected:', selectedSources);
+      setShowDataLayer(true);
+    } else if (selectedSources.length === 0 && showDataLayer) {
+      console.log('Auto-disabling data layer - no sources selected');
+      setShowDataLayer(false);
     }
-  }, [filteredGridData, activeSourceFilters, showDataLayer]);
+  }, [selectedSources, showDataLayer]);
+
+  // Handle pollutant change
+  const handlePollutantChange = (newPollutant) => {
+    console.log('App: Pollutant changed from', selectedPollutant, 'to', newPollutant);
+    setSelectedPollutant(newPollutant);
+  };
+
+  // Debug: Log key state changes
+  useEffect(() => {
+    console.log('=== App State Update ===');
+    console.log('Selected Pollutant:', selectedPollutant);
+    console.log('Selected Sources:', selectedSources);
+    console.log('Show Data Layer:', showDataLayer);
+    console.log('Visible Grids:', visibleGridCount);
+    console.log('Filter Pane Visible:', isFilterPaneVisible);
+  }, [selectedPollutant, selectedSources, showDataLayer, visibleGridCount, isFilterPaneVisible]);
 
   return (
     <div className="app">
       <Header />
 
-      <FilterPane
+      <EnhancedFilterPane
         filters={filters}
         onFilterChange={handleFilterChange}
         isVisible={isFilterPaneVisible}
         onToggleVisibility={toggleFilterPane}
+        selectedPollutant={selectedPollutant}
+        onPollutantChange={handlePollutantChange}
+        pollutantStats={pollutantStats}
+        sourceStats={sourceStats}
       />
 
       <MapContainer
-        sourceGridData={filteredGridData}
-        activeSourceFilters={activeSourceFilters}
+        enhancedGridData={enhancedGridData}
+        selectedPollutant={selectedPollutant}
+        selectedSources={selectedSources}
         selectedMapStyle={selectedMapStyle}
         showDataLayer={showDataLayer}
         onMapStyleChange={setSelectedMapStyle}
         onDataLayerToggle={setShowDataLayer}
+        pollutantStats={pollutantStats}
         sourceStats={sourceStats}
-        activeAirQualityFilters={activeAirQualityFilters}
         filtersVisible={isFilterPaneVisible}
+        visibleGridCount={visibleGridCount}
       />
     </div>
   );

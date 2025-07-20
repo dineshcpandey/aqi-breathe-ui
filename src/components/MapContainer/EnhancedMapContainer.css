@@ -1,0 +1,261 @@
+.map-container {
+    padding: 1rem;
+    height: calc(100vh - 100px);
+    position: relative;
+    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.map-container.with-filters {
+    margin-left: 380px;
+}
+
+.map {
+    height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Status Bar */
+.map-status-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 900;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.status-message {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.status-details {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pollutant-indicator,
+.sources-indicator,
+.grids-indicator {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.sources-indicator {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+    border-color: rgba(46, 204, 113, 0.2);
+}
+
+.grids-indicator {
+    background: rgba(241, 196, 15, 0.1);
+    color: #f39c12;
+    border-color: rgba(241, 196, 15, 0.2);
+}
+
+/* Instructions Overlay */
+.instructions-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 800;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(15px);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    max-width: 400px;
+    text-align: center;
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.instructions-content h3 {
+    margin: 0 0 12px 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.instructions-content>p {
+    margin: 0 0 16px 0;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.instructions-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.instruction-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.step-text {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 500;
+    text-align: left;
+}
+
+.instructions-note {
+    font-size: 0.8rem;
+    color: #95a5a6;
+    font-style: italic;
+    margin: 0;
+}
+
+/* Existing AQI marker styles */
+.aqi-marker-icon {
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    border: 2px solid white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.aqi-popup {
+    font-family: Arial, sans-serif;
+}
+
+.aqi-popup h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.aqi-popup p {
+    margin: 5px 0;
+}
+
+.aqi-popup .coords {
+    font-size: 11px;
+    color: #7f8c8d;
+}
+
+.distance-marker {
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .map-container {
+        padding: 0.5rem;
+        margin-left: 0;
+    }
+
+    .map-container.with-filters {
+        margin-left: 0;
+    }
+
+    .map-status-bar {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        padding: 10px 12px;
+    }
+
+    .status-details {
+        gap: 8px;
+    }
+
+    .instructions-overlay {
+        max-width: calc(100vw - 40px);
+        padding: 20px;
+    }
+
+    .instruction-step {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .step-text {
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .instructions-steps {
+        gap: 8px;
+    }
+
+    .instructions-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .status-message {
+        font-size: 0.8rem;
+    }
+
+    .status-details {
+        justify-content: center;
+    }
+}

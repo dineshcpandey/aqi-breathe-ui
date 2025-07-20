@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { getSourceColorAndOpacity } from '../../utils/sourceBasedGridGenerator';
+import { getSourceColorAndOpacity } from '../../utils/enhancedGridGenerator';
 
 const SourceGridLayer = ({
     gridData,

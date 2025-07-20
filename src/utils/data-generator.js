@@ -222,6 +222,46 @@ function generateEnvironmentalData(datetime, dataType = 'historical') {
     };
 }
 
+function generateDescription(sensor) {
+    const descriptions = {
+        construction: [
+            "Active construction site with concrete mixing",
+            "Metro construction with heavy machinery",
+            "Building project with dust and emissions",
+            "Highway expansion with earthmoving equipment"
+        ],
+        vehicle: [
+            "Major bus terminal with heavy traffic congestion",
+            "Traffic junction with high vehicle density",
+            "Highway monitoring point with diesel emissions",
+            "Parking complex with vehicle idling"
+        ],
+        dust: [
+            "Open area with loose soil and construction debris",
+            "Vacant plot with exposed earth",
+            "Riverbank area with dust storms",
+            "Quarry site with crushing operations"
+        ],
+        industrial: [
+            "Industrial zone with manufacturing emissions",
+            "Factory area with processing activities",
+            "Manufacturing hub with chemical processes",
+            "Processing plant with stack emissions"
+        ],
+        residential: [
+            "Residential area with cooking and heating",
+            "Community center with local emissions",
+            "Housing complex with domestic activities",
+            "Neighborhood with mixed residential sources"
+        ]
+    };
+
+    const sourceDescriptions = descriptions[sensor.source] || descriptions.residential;
+    const randomDesc = sourceDescriptions[Math.floor(Math.random() * sourceDescriptions.length)];
+
+    return `${sensor.station} - ${randomDesc}`;
+}
+
 function generateSensorReading(sensor, datetime, dataType = 'historical') {
     const template = SENSOR_TEMPLATES[sensor.source];
     const timeMultiplier = getTimeBasedMultiplier(datetime, template, dataType);
@@ -253,10 +293,10 @@ function generateSensorReading(sensor, datetime, dataType = 'historical') {
     });
 
     return {
-        sensor_id: sensor.id,
+        id: sensor.id,                    // Changed from sensor_id
         station: sensor.station,
-        latitude: sensor.lat,
-        longitude: sensor.lng,
+        lat: sensor.lat,                  // Changed from latitude  
+        lng: sensor.lng,                  // Changed from longitude
         timestamp: datetime.toISOString(),
         aqi: Math.round(readings.aqi),
         pm25: readings.pm25,
@@ -265,12 +305,11 @@ function generateSensorReading(sensor, datetime, dataType = 'historical') {
         no2: readings.no2,
         so2: readings.so2,
         temperature: environmental.temperature,
-        humidity: environmental.humidity,
-        wind_speed: environmental.windSpeed,
-        source_type: sensor.source,
+        rh: environmental.humidity,       // Changed from humidity
+        windSpeed: environmental.windSpeed, // Changed from wind_speed  
+        source: sensor.source,            // Changed from source_type
         severity: calculateSeverity(Math.round(readings.aqi)),
-        data_type: dataType,
-        area: sensor.area
+        description: generateDescription(sensor) // NEW: Add description
     };
 }
 
@@ -418,7 +457,8 @@ function generateDataSummary(currentData, historicalData, predictedData) {
     // Source distribution
     const sourceStats = {};
     currentData.forEach(reading => {
-        sourceStats[reading.source_type] = (sourceStats[reading.source_type] || 0) + 1;
+        // sourceStats[reading.source_type] = (sourceStats[reading.source_type] || 0) + 1;
+        sourceStats[reading.source] = (sourceStats[reading.source] || 0) + 1;
     });
 
     console.log(`\nSource Distribution:`);

@@ -4,7 +4,7 @@ import LayerControls from '../LayerControls/LayerControls';
 import { baseLayers } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
 import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
-import './MapContainer.css';
+import './EnhancedMapContainer.css';
 import EnhancedGridLayer from '../GridLayer/EnhancedGridLayer';
 
 // Fix for default markers in Leaflet with React
@@ -146,11 +146,12 @@ const MapContainer = ({
 
     // Create status message for current selection
     const getStatusMessage = () => {
+        const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
+
         if (selectedSources.length === 0) {
-            return 'Select pollution sources from the filter panel to view data';
+            return `Showing base ${pollutantName} distribution. Select pollution sources to see their contribution intensity.`;
         }
 
-        const pollutantName = enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name || selectedPollutant.toUpperCase();
         const sourceNames = selectedSources.map(source =>
             enhancedGridData?.pollutionSources?.[source]?.name || source
         ).join(' + ');
@@ -175,17 +176,26 @@ const MapContainer = ({
                 <div className="status-message">
                     {getStatusMessage()}
                 </div>
-                {selectedSources.length > 0 && (
+                {enhancedGridData && (
                     <div className="status-details">
                         <span className="pollutant-indicator">
                             🌫️ {enhancedGridData?.pollutantColorSchemes?.[selectedPollutant]?.name}
                         </span>
-                        <span className="sources-indicator">
-                            🏭 {selectedSources.length} source{selectedSources.length !== 1 ? 's' : ''}
-                        </span>
-                        <span className="grids-indicator">
-                            📊 {visibleGridCount} grid{visibleGridCount !== 1 ? 's' : ''}
-                        </span>
+                        {selectedSources.length > 0 && (
+                            <>
+                                <span className="sources-indicator">
+                                    🏭 {selectedSources.length} source{selectedSources.length !== 1 ? 's' : ''}
+                                </span>
+                                <span className="grids-indicator">
+                                    📊 {visibleGridCount} grid{visibleGridCount !== 1 ? 's' : ''} visible
+                                </span>
+                            </>
+                        )}
+                        {selectedSources.length === 0 && (
+                            <span className="base-layer-indicator">
+                                📊 Base distribution (all grids visible)
+                            </span>
+                        )}
                     </div>
                 )}
             </div>
@@ -203,24 +213,24 @@ const MapContainer = ({
                 />
             )}
 
-            {/* Quick Instructions Overlay */}
-            {selectedSources.length === 0 && (
+            {/* Quick Instructions Overlay - only show if no grid data available */}
+            {!enhancedGridData && (
                 <div className="instructions-overlay">
                     <div className="instructions-content">
                         <h3>🌍 Air Quality Analysis</h3>
-                        <p>Welcome to the enhanced pollution visualization platform!</p>
+                        <p>Loading pollution visualization data...</p>
                         <div className="instructions-steps">
                             <div className="instruction-step">
                                 <span className="step-number">1</span>
-                                <span className="step-text">Open the filter panel (←) on the left</span>
+                                <span className="step-text">Data is being generated...</span>
                             </div>
                             <div className="instruction-step">
                                 <span className="step-number">2</span>
-                                <span className="step-text">Choose a pollutant (AQI, PM2.5, etc.)</span>
+                                <span className="step-text">Map will show pollutant distribution</span>
                             </div>
                             <div className="instruction-step">
                                 <span className="step-number">3</span>
-                                <span className="step-text">Select pollution sources to analyze</span>
+                                <span className="step-text">Use filter panel to analyze sources</span>
                             </div>
                         </div>
                         <p className="instructions-note">

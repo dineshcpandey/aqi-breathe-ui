@@ -48,7 +48,8 @@
 
 .pollutant-indicator,
 .sources-indicator,
-.grids-indicator {
+.grids-indicator,
+.base-layer-indicator {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
     padding: 2px 8px;

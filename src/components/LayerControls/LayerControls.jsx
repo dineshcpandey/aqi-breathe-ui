@@ -4,10 +4,6 @@ import './LayerControls.css';
 const LayerControls = ({
     selectedMapStyle,
     onMapStyleChange,
-    showAQILayer,
-    onAQIToggle,
-    distanceMode,
-    onDistanceModeToggle,
     coordinates
 }) => {
     return (
@@ -23,23 +19,6 @@ const LayerControls = ({
                     <option value="satellite">Satellite</option>
                     <option value="dark">Dark Mode</option>
                 </select>
-            </div>
-
-            <div className="control-group">
-                <label>Tools</label>
-                <button
-                    onClick={onDistanceModeToggle}
-                    className={distanceMode ? 'active' : ''}
-                >
-                    {distanceMode ? '❌ Stop Measuring' : '📏 Measure Distance'}
-                </button>
-            </div>
-
-            <div className="control-group">
-                <label>Sample AQI Layer</label>
-                <button onClick={() => onAQIToggle(!showAQILayer)}>
-                    {showAQILayer ? '🌫️ Hide AQI Demo' : '🌫️ Show AQI Demo'}
-                </button>
             </div>
 
             <div className="coords-display">

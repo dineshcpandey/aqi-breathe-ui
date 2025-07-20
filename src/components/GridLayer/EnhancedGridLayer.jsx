@@ -32,9 +32,9 @@ const EnhancedGridLayer = ({
             gridPolygonsRef.current = {};
         }
 
-        // Only show grids if layer is visible and we have selected sources
-        if (!isVisible || !gridData?.grids || selectedSources.length === 0) {
-            console.log('Not showing grids - visibility:', isVisible, 'sources:', selectedSources.length);
+        // Only show grids if layer is visible and we have grid data
+        if (!isVisible || !gridData?.grids) {
+            console.log('Not showing grids - visibility:', isVisible, 'gridData:', !!gridData?.grids);
 
             // Remove layer from map if it exists
             if (map.hasLayer(gridLayerRef.current)) {
@@ -55,10 +55,17 @@ const EnhancedGridLayer = ({
             const colorInfo = getPollutantColor(selectedPollutant, pollutantValue);
 
             // Calculate combined source intensity (opacity)
-            const sourceIntensity = calculateCombinedSourceIntensity(grid, selectedSources, selectedPollutant);
+            let sourceIntensity;
+            if (selectedSources.length === 0) {
+                // Show pollutant at default opacity when no sources selected
+                sourceIntensity = 0.7; // Default opacity to show base pollutant distribution
+            } else {
+                // Calculate based on source contributions
+                sourceIntensity = calculateCombinedSourceIntensity(grid, selectedSources, selectedPollutant);
 
-            // Skip grids with zero contribution
-            if (sourceIntensity <= 0) return;
+                // Skip grids with zero contribution from selected sources
+                if (sourceIntensity <= 0) return;
+            }
 
             // Create polygon with pollutant color and source intensity
             const polygon = L.polygon(grid.corners, {
@@ -108,7 +115,7 @@ const EnhancedGridLayer = ({
     useEffect(() => {
         if (!map || !gridLayerRef.current) return;
 
-        if (isVisible && selectedSources.length > 0) {
+        if (isVisible) {
             if (!map.hasLayer(gridLayerRef.current)) {
                 map.addLayer(gridLayerRef.current);
             }
@@ -117,7 +124,7 @@ const EnhancedGridLayer = ({
                 map.removeLayer(gridLayerRef.current);
             }
         }
-    }, [map, isVisible, selectedSources]);
+    }, [map, isVisible]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -157,7 +164,7 @@ const createPopupContent = (grid, selectedPollutant, selectedSources, pollutantV
         }).join('');
 
     // Create source contributions section for selected pollutant
-    const sourceContributionsHtml = selectedSources.map(source => {
+    const sourceContributionsHtml = selectedSources.length > 0 ? selectedSources.map(source => {
         const contribution = grid.sourceContributions?.[selectedPollutant]?.[source] || 0;
         const sourceInfo = POLLUTION_SOURCES[source];
         return `<p class="source-contribution-row">
@@ -165,7 +172,7 @@ const createPopupContent = (grid, selectedPollutant, selectedSources, pollutantV
             <strong>${sourceInfo?.name || source}:</strong> 
             <span class="contribution-value" style="color: ${sourceInfo?.color || '#666'}">${contribution}%</span>
         </p>`;
-    }).join('');
+    }).join('') : '<p class="no-sources-selected">No sources selected - showing base pollutant distribution</p>';
 
     // Calculate total contribution
     const totalContribution = selectedSources.reduce((total, source) => {
@@ -194,6 +201,7 @@ const createPopupContent = (grid, selectedPollutant, selectedSources, pollutantV
                 </div>
             </div>
 
+            ${selectedSources.length > 0 ? `
             <div class="popup-section">
                 <h4>🏭 Source Contributions to ${selectedPollutant.toUpperCase()}</h4>
                 <div class="source-contributions">
@@ -219,6 +227,23 @@ const createPopupContent = (grid, selectedPollutant, selectedSources, pollutantV
     }).join('')}
                 </div>
             </div>
+            ` : `
+            <div class="popup-section">
+                <h4>💡 Source Analysis</h4>
+                <div class="no-sources-info">
+                    <p>Select pollution sources from the filter panel to see their contribution to this pollutant.</p>
+                    <div class="available-sources">
+                        <h5>Available Sources:</h5>
+                        ${Object.entries(POLLUTION_SOURCES).map(([source, info]) => `
+                            <p class="available-source-row">
+                                <span class="source-icon">${info.icon}</span>
+                                <strong>${info.name}:</strong> ${grid.sourceContributions?.[selectedPollutant]?.[source] || 0}%
+                            </p>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            `}
 
             <div class="popup-footer">
                 <p class="coordinates">Lat: ${grid.centerLat.toFixed(5)}, Lng: ${grid.centerLng.toFixed(5)}</p>

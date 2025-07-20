@@ -94,9 +94,13 @@ function App() {
       });
     }
 
-    // Count grids that would be visible (have contributions from selected sources)
+    // Count grids that would be visible
     let visibleCount = 0;
-    if (activeSources.length > 0) {
+    if (activeSources.length === 0) {
+      // When no sources selected, all grids are visible (showing base pollutant)
+      visibleCount = enhancedGridData.grids.length;
+    } else {
+      // When sources are selected, count grids with contributions
       enhancedGridData.grids.forEach(grid => {
         const totalContribution = activeSources.reduce((total, source) => {
           return total + (grid.sourceContributions?.[selectedPollutant]?.[source] || 0);
@@ -120,16 +124,13 @@ function App() {
     };
   }, [enhancedGridData, getActiveFilters, selectedPollutant]);
 
-  // Auto-enable data layer when sources are selected
+  // Auto-enable data layer when pollutant is available (not just sources)
   useEffect(() => {
-    if (selectedSources.length > 0 && !showDataLayer) {
-      console.log('Auto-enabling data layer - sources selected:', selectedSources);
+    if (enhancedGridData && !showDataLayer) {
+      console.log('Auto-enabling data layer - enhanced grid data available');
       setShowDataLayer(true);
-    } else if (selectedSources.length === 0 && showDataLayer) {
-      console.log('Auto-disabling data layer - no sources selected');
-      setShowDataLayer(false);
     }
-  }, [selectedSources, showDataLayer]);
+  }, [enhancedGridData, showDataLayer]);
 
   // Handle pollutant change
   const handlePollutantChange = (newPollutant) => {

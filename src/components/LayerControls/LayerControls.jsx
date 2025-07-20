@@ -86,20 +86,7 @@ const LayerControls = ({
                 </div>
             )}
 
-            <div className="control-group">
-                <label>Tools</label>
-                <button
-                    className={distanceMode ? 'active' : ''}
-                    onClick={onDistanceModeToggle}
-                >
-                    {distanceMode ? '📏 Exit Measure' : '📏 Measure Distance'}
-                </button>
-                {distanceMode && (
-                    <div className="tool-info">
-                        Click on map to measure distances
-                    </div>
-                )}
-            </div>
+
 
             <div className="coords-display">
                 {coordinates}

@@ -5,6 +5,10 @@ import { baseLayers, getAQIColor, getAQIStatus } from '../../utils/mapUtils';
 import { calculateDistance } from '../../utils/aqiUtils';
 import { DEFAULT_MAP_CONFIG } from '../../utils/constants';
 import './MapContainer.css';
+import GridLayer from '../GridLayer/GridLayer';
+import Legend from '../Legend/Legend';
+import { generateSampleGridData, getDatasetStatistics } from '../../utils/gridDataGenerator';
+
 
 // Fix for default markers in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -30,6 +34,9 @@ const MapContainer = ({
     const [distancePoints, setDistancePoints] = useState([]);
     const distanceMarkersRef = useRef([]);
     const distanceLinesRef = useRef([]);
+    const [gridData, setGridData] = useState(null);
+    const [selectedPollutant, setSelectedPollutant] = useState('aqi');
+    const [gridStats, setGridStats] = useState(null);
 
     // Initialize map
     useEffect(() => {
@@ -55,6 +62,14 @@ const MapContainer = ({
         };
     }, []);
 
+    //  useEffect to load grid data:
+    useEffect(() => {
+        // Generate grid data on component mount
+        const data = generateSampleGridData();
+        setGridData(data);
+        setGridStats(getDatasetStatistics(data));
+        console.log('Grid data loaded:', data.metadata);
+    }, []);
     // Handle map style changes
     useEffect(() => {
         if (mapInstanceRef.current) {
@@ -190,9 +205,45 @@ const MapContainer = ({
                 onDistanceModeToggle={toggleDistanceMode}
                 coordinates={coordinates}
             />
+
             <div ref={mapRef} className="map" />
+
+            {/* Grid Visualization Layer */}
+            {gridData && (
+                <GridLayer
+                    gridData={gridData}
+                    selectedPollutant={selectedPollutant}
+                    map={mapInstanceRef.current}
+                    isVisible={showAQILayer}
+                />
+            )}
+
+            {/* Legend */}
+            {gridData && (
+                <Legend
+                    colorSchemes={gridData.colorSchemes}
+                    selectedPollutant={selectedPollutant}
+                    onPollutantChange={setSelectedPollutant}
+                    gridStats={gridStats}
+                />
+            )}
         </div>
     );
+
+    // return (
+    //     <div className="map-container">
+    //         <LayerControls
+    //             selectedMapStyle={selectedMapStyle}
+    //             onMapStyleChange={onMapStyleChange}
+    //             showAQILayer={showAQILayer}
+    //             onAQIToggle={onAQIToggle}
+    //             distanceMode={distanceMode}
+    //             onDistanceModeToggle={toggleDistanceMode}
+    //             coordinates={coordinates}
+    //         />
+    //         <div ref={mapRef} className="map" />
+    //     </div>
+    // );
 };
 
 export default MapContainer;

@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
 import FilterPane from './components/FilterPane/FilterPane';
 import { useFilters } from './hooks/useFilters';
-import { anandViharAQIData } from './utils/dummyData';
+import { generateSampleSourceGridData, applyAirQualityThresholds, getSourceStatistics } from './utils/sourceBasedGridGenerator';
 import './App.css';
 
 function App() {
-  const [aqiData, setAqiData] = useState(anandViharAQIData);
+  // Source-based grid data instead of point data
+  const [sourceGridData, setSourceGridData] = useState(null);
   const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
-  const [showAQILayer, setShowAQILayer] = useState(false);
+  const [showDataLayer, setShowDataLayer] = useState(false);
 
   const {
     filters,
@@ -19,103 +20,80 @@ function App() {
     getActiveFilters
   } = useFilters();
 
-  const addAQIData = (newData) => {
-    setAqiData(prevData => [...prevData, ...newData]);
-  };
+  // Load source-based grid data on component mount
+  useEffect(() => {
+    console.log('Loading source-based grid data...');
+    const data = generateSampleSourceGridData();
+    setSourceGridData(data);
 
-  // Filter data based on active filters
-  const filteredAqiData = React.useMemo(() => {
-    // Use filters directly instead of getActiveFilters to avoid stale closure issues
-    const activeFilters = {
-      airQuality: Object.keys(filters.airQuality).filter(key => filters.airQuality[key]),
-      sources: Object.keys(filters.sources).filter(key => filters.sources[key])
-    };
+    console.log(`Generated ${data.grids.length} grid cells with source contributions`);
+    console.log('Grid data metadata:', data.metadata);
+  }, []);
 
-    // Debug logging
-    console.log('=== FILTERING DEBUG ===');
-    console.log('Raw filters state:', filters);
-    console.log('Active filters:', activeFilters);
-    console.log('Total data points:', aqiData.length);
-
-    // Check if any filters are actually active
-    const hasAirQualityFilters = activeFilters.airQuality && activeFilters.airQuality.length > 0;
-    const hasSourceFilters = activeFilters.sources && activeFilters.sources.length > 0;
-    const hasAnyFilters = hasAirQualityFilters || hasSourceFilters;
-
-    if (!hasAnyFilters) {
-      console.log('No active filters - showing 0 points');
-      return [];
+  // Process filtered data based on active filters
+  const { filteredGridData, activeSourceFilters, activeAirQualityFilters, sourceStats } = React.useMemo(() => {
+    if (!sourceGridData) {
+      return {
+        filteredGridData: null,
+        activeSourceFilters: [],
+        activeAirQualityFilters: [],
+        sourceStats: {}
+      };
     }
 
-    console.log('Has air quality filters:', hasAirQualityFilters, activeFilters.airQuality);
-    console.log('Has source filters:', hasSourceFilters, activeFilters.sources);
+    const activeFilters = getActiveFilters();
 
-    // Apply filtering logic
-    const filtered = aqiData.filter(item => {
-      let shouldInclude = false;
+    // Get active source filters
+    const activeSources = activeFilters.sources || [];
+    const activeAirQuality = activeFilters.airQuality || [];
 
-      // Air Quality filters
-      if (hasAirQualityFilters) {
-        activeFilters.airQuality.forEach(filter => {
-          switch (filter) {
-            case 'aqi':
-              if (item.aqi >= 150) {
-                shouldInclude = true;
-                console.log(`Including ${item.station} for AQI filter (${item.aqi})`);
-              }
-              break;
-            case 'pm25':
-              if (item.pm25 && item.pm25 >= 75) {
-                shouldInclude = true;
-                console.log(`Including ${item.station} for PM2.5 filter (${item.pm25})`);
-              }
-              break;
-            case 'rh':
-              if (item.rh && item.rh <= 45) {
-                shouldInclude = true;
-                console.log(`Including ${item.station} for RH filter (${item.rh})`);
-              }
-              break;
-            case 'co':
-              if (item.co && item.co >= 1.5) {
-                shouldInclude = true;
-                console.log(`Including ${item.station} for CO filter (${item.co})`);
-              }
-              break;
-            default:
-              break;
-          }
-        });
-      }
+    console.log('=== FILTERING DEBUG ===');
+    console.log('Active source filters:', activeSources);
+    console.log('Active air quality filters:', activeAirQuality);
+    console.log('Total grid cells:', sourceGridData.grids.length);
 
-      // Source filters
-      if (hasSourceFilters) {
-        if (activeFilters.sources.includes(item.source)) {
-          shouldInclude = true;
-          console.log(`Including ${item.station} for source filter (${item.source})`);
-        }
-      }
+    if (activeSources.length === 0) {
+      console.log('No source filters active - showing 0 grids');
+      return {
+        filteredGridData: { ...sourceGridData, grids: [] },
+        activeSourceFilters: [],
+        activeAirQualityFilters: activeAirQuality,
+        sourceStats: {}
+      };
+    }
 
-      return shouldInclude;
-    });
+    // Apply air quality thresholds first
+    let filteredGrids = applyAirQualityThresholds(sourceGridData.grids, activeAirQuality);
 
-    console.log('Filtered data points:', filtered.length);
-    console.log('Filtered stations:', filtered.map(item => item.station));
+    console.log(`After air quality thresholds: ${filteredGrids.length} grids`);
+
+    // Calculate source statistics
+    const stats = getSourceStatistics(filteredGrids, activeSources);
+
+    console.log('Source statistics:', stats);
     console.log('=== END FILTERING DEBUG ===');
 
-    return filtered;
-  }, [aqiData, filters]); // Use filters directly instead of getActiveFilters
+    return {
+      filteredGridData: { ...sourceGridData, grids: filteredGrids },
+      activeSourceFilters: activeSources,
+      activeAirQualityFilters: activeAirQuality,
+      sourceStats: stats
+    };
+  }, [sourceGridData, getActiveFilters]);
 
   // Debug: Log when filtered data changes
-  React.useEffect(() => {
-    console.log('Filtered AQI data changed:', filteredAqiData.length, 'points');
+  useEffect(() => {
+    if (filteredGridData) {
+      console.log(`Filtered grid data changed: ${filteredGridData.grids.length} grids`);
+      console.log('Active sources:', activeSourceFilters);
 
-    // Auto-enable AQI layer when there are filtered results
-    if (filteredAqiData.length > 0 && !showAQILayer) {
-      console.log('Auto-enabling AQI layer since we have filtered data');
-      setShowAQILayer(true);
+      // Auto-enable data layer when there are active sources
+      if (activeSourceFilters.length > 0 && !showDataLayer) {
+        console.log('Auto-enabling data layer since we have active source filters');
+        setShowDataLayer(true);
+      }
     }
-  }, [filteredAqiData, showAQILayer]);
+  }, [filteredGridData, activeSourceFilters, showDataLayer]);
 
   return (
     <div className="app">
@@ -129,12 +107,14 @@ function App() {
       />
 
       <MapContainer
-        aqiData={filteredAqiData}
+        sourceGridData={filteredGridData}
+        activeSourceFilters={activeSourceFilters}
         selectedMapStyle={selectedMapStyle}
-        showAQILayer={showAQILayer}
+        showDataLayer={showDataLayer}
         onMapStyleChange={setSelectedMapStyle}
-        onAQIToggle={setShowAQILayer}
-        onAddAQIData={addAQIData}
+        onDataLayerToggle={setShowDataLayer}
+        sourceStats={sourceStats}
+        activeAirQualityFilters={activeAirQualityFilters}
         filtersVisible={isFilterPaneVisible}
       />
     </div>

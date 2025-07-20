@@ -1,246 +1,149 @@
 {
   "metadata": {
-    "area": "Anand Vihar",
+    "areaName": "Anand Vihar",
     "center": {
       "lat": 28.6469,
       "lng": 77.3154
     },
-    "radius_km": 5,
-    "total_sensors": 25,
-    "generated_at": "2025-07-20T14:18:54.656Z",
-    "sensor_types": {
-      "construction": 6,
-      "vehicle": 8,
-      "dust": 4,
+    "radiusKm": 2.5,
+    "totalSensors": 16,
+    "generatedAt": "2025-07-20T17:20:42.349Z",
+    "distribution": {
+      "construction": 5,
+      "vehicle": 6,
+      "dust": 5,
       "industrial": 4,
-      "residential": 3
+      "residential": 8
     }
   },
   "sensors": [
     {
-      "id": "sensor_construction_001",
-      "station": "Building Project A",
-      "lat": 28.675248,
-      "lng": 77.299444,
+      "id": "construction_001",
+      "lat": 28.638896,
+      "lng": 77.320081,
+      "station": "Metro Construction A",
       "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Building Project A - Monitoring station for construction pollution source"
+      "staticDescription": "Metro construction with heavy machinery"
     },
     {
-      "id": "sensor_construction_002",
+      "id": "construction_002",
+      "lat": 28.651182,
+      "lng": 77.310088,
       "station": "Building Project B",
-      "lat": 28.676476,
-      "lng": 77.300461,
       "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Building Project B - Monitoring station for construction pollution source"
+      "staticDescription": "Building project with dust and emissions"
     },
     {
-      "id": "sensor_construction_003",
-      "station": "Metro Construction C",
-      "lat": 28.645423,
-      "lng": 77.272244,
+      "id": "construction_003",
+      "lat": 28.641973,
+      "lng": 77.319571,
+      "station": "Highway Expansion C",
       "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Metro Construction C - Monitoring station for construction pollution source"
+      "staticDescription": "Highway expansion with earthmoving equipment"
     },
     {
-      "id": "sensor_construction_004",
-      "station": "Building Project D",
-      "lat": 28.641799,
-      "lng": 77.302,
+      "id": "construction_004",
+      "lat": 28.639545,
+      "lng": 77.312237,
+      "station": "Active Construction D",
       "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Building Project D - Monitoring station for construction pollution source"
+      "staticDescription": "Active construction site with concrete mixing"
     },
     {
-      "id": "sensor_construction_005",
-      "station": "Highway Expansion E",
-      "lat": 28.647976,
-      "lng": 77.285993,
+      "id": "construction_005",
+      "lat": 28.634781,
+      "lng": 77.325225,
+      "station": "Industrial Building Site E",
       "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Highway Expansion E - Monitoring station for construction pollution source"
+      "staticDescription": "Metro construction with heavy machinery"
     },
     {
-      "id": "sensor_construction_006",
-      "station": "Highway Expansion F",
-      "lat": 28.684399,
-      "lng": 77.328358,
-      "source": "construction",
-      "area": "Anand Vihar",
-      "description": "Highway Expansion F - Monitoring station for construction pollution source"
-    },
-    {
-      "id": "sensor_vehicle_001",
-      "station": "Parking Complex A",
-      "lat": 28.644066,
-      "lng": 77.309831,
+      "id": "vehicle_006",
+      "lat": 28.64288,
+      "lng": 77.321296,
+      "station": "Bus Terminal A",
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Parking Complex A - Monitoring station for vehicle pollution source"
+      "staticDescription": "Major bus terminal with heavy traffic congestion"
     },
     {
-      "id": "sensor_vehicle_002",
-      "station": "Bus Terminal B",
-      "lat": 28.645205,
-      "lng": 77.317345,
+      "id": "vehicle_007",
+      "lat": 28.640373,
+      "lng": 77.31577,
+      "station": "Traffic Junction B",
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Bus Terminal B - Monitoring station for vehicle pollution source"
+      "staticDescription": "Traffic junction with high vehicle density"
     },
     {
-      "id": "sensor_vehicle_003",
+      "id": "vehicle_008",
+      "lat": 28.647326,
+      "lng": 77.315589,
       "station": "Highway Monitor C",
-      "lat": 28.652543,
-      "lng": 77.32561,
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Highway Monitor C - Monitoring station for vehicle pollution source"
+      "staticDescription": "Highway monitoring point with diesel emissions"
     },
     {
-      "id": "sensor_vehicle_004",
+      "id": "vehicle_009",
+      "lat": 28.64988,
+      "lng": 77.316929,
       "station": "Parking Complex D",
-      "lat": 28.627804,
-      "lng": 77.326913,
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Parking Complex D - Monitoring station for vehicle pollution source"
+      "staticDescription": "Parking complex with vehicle idling"
     },
     {
-      "id": "sensor_vehicle_005",
-      "station": "Highway Monitor E",
-      "lat": 28.648303,
-      "lng": 77.314308,
+      "id": "vehicle_010",
+      "lat": 28.638183,
+      "lng": 77.327784,
+      "station": "Bus Terminal E",
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Highway Monitor E - Monitoring station for vehicle pollution source"
+      "staticDescription": "Major bus terminal with heavy traffic congestion"
     },
     {
-      "id": "sensor_vehicle_006",
+      "id": "vehicle_011",
+      "lat": 28.64367,
+      "lng": 77.314382,
       "station": "Traffic Junction F",
-      "lat": 28.627111,
-      "lng": 77.346404,
       "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Traffic Junction F - Monitoring station for vehicle pollution source"
+      "staticDescription": "Traffic junction with high vehicle density"
     },
     {
-      "id": "sensor_vehicle_007",
-      "station": "Bus Terminal G",
-      "lat": 28.648195,
-      "lng": 77.315948,
-      "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Bus Terminal G - Monitoring station for vehicle pollution source"
-    },
-    {
-      "id": "sensor_vehicle_008",
-      "station": "Parking Complex H",
-      "lat": 28.660669,
-      "lng": 77.359235,
-      "source": "vehicle",
-      "area": "Anand Vihar",
-      "description": "Parking Complex H - Monitoring station for vehicle pollution source"
-    },
-    {
-      "id": "sensor_dust_001",
+      "id": "dust_012",
+      "lat": 28.640743,
+      "lng": 77.310123,
       "station": "Open Ground A",
-      "lat": 28.651557,
-      "lng": 77.316549,
       "source": "dust",
-      "area": "Anand Vihar",
-      "description": "Open Ground A - Monitoring station for dust pollution source"
+      "staticDescription": "Large unpaved area with loose soil"
     },
     {
-      "id": "sensor_dust_002",
-      "station": "Open Ground B",
-      "lat": 28.655383,
-      "lng": 77.339251,
+      "id": "dust_013",
+      "lat": 28.635989,
+      "lng": 77.294113,
+      "station": "Vacant Plot B",
       "source": "dust",
-      "area": "Anand Vihar",
-      "description": "Open Ground B - Monitoring station for dust pollution source"
+      "staticDescription": "Vacant plot with exposed soil and debris"
     },
     {
-      "id": "sensor_dust_003",
-      "station": "Vacant Plot C",
-      "lat": 28.642445,
-      "lng": 77.29295,
+      "id": "dust_014",
+      "lat": 28.664819,
+      "lng": 77.329101,
+      "station": "Quarry Site C",
       "source": "dust",
-      "area": "Anand Vihar",
-      "description": "Vacant Plot C - Monitoring station for dust pollution source"
+      "staticDescription": "Quarry site with crushing operations"
     },
     {
-      "id": "sensor_dust_004",
-      "station": "Vacant Plot D",
-      "lat": 28.674705,
-      "lng": 77.330271,
+      "id": "dust_015",
+      "lat": 28.64066,
+      "lng": 77.32603,
+      "station": "Unpaved Area D",
       "source": "dust",
-      "area": "Anand Vihar",
-      "description": "Vacant Plot D - Monitoring station for dust pollution source"
+      "staticDescription": "Open area with construction debris"
     },
     {
-      "id": "sensor_industrial_001",
-      "station": "Processing Plant A",
-      "lat": 28.617196,
-      "lng": 77.302226,
-      "source": "industrial",
-      "area": "Anand Vihar",
-      "description": "Processing Plant A - Monitoring station for industrial pollution source"
-    },
-    {
-      "id": "sensor_industrial_002",
-      "station": "Processing Plant B",
-      "lat": 28.664007,
-      "lng": 77.302783,
-      "source": "industrial",
-      "area": "Anand Vihar",
-      "description": "Processing Plant B - Monitoring station for industrial pollution source"
-    },
-    {
-      "id": "sensor_industrial_003",
-      "station": "Factory Area C",
-      "lat": 28.608383,
-      "lng": 77.336394,
-      "source": "industrial",
-      "area": "Anand Vihar",
-      "description": "Factory Area C - Monitoring station for industrial pollution source"
-    },
-    {
-      "id": "sensor_industrial_004",
-      "station": "Manufacturing Hub D",
-      "lat": 28.640847,
-      "lng": 77.300059,
-      "source": "industrial",
-      "area": "Anand Vihar",
-      "description": "Manufacturing Hub D - Monitoring station for industrial pollution source"
-    },
-    {
-      "id": "sensor_residential_001",
-      "station": "Market Area A",
-      "lat": 28.680217,
-      "lng": 77.339177,
-      "source": "residential",
-      "area": "Anand Vihar",
-      "description": "Market Area A - Monitoring station for residential pollution source"
-    },
-    {
-      "id": "sensor_residential_002",
-      "station": "Community Center B",
-      "lat": 28.644247,
-      "lng": 77.315832,
-      "source": "residential",
-      "area": "Anand Vihar",
-      "description": "Community Center B - Monitoring station for residential pollution source"
-    },
-    {
-      "id": "sensor_residential_003",
-      "station": "School Zone C",
-      "lat": 28.61931,
-      "lng": 77.337982,
-      "source": "residential",
-      "area": "Anand Vihar",
-      "description": "School Zone C - Monitoring station for residential pollution source"
+      "id": "dust_016",
+      "lat": 28.641995,
+      "lng": 77.31839,
+      "station": "Demolished Building Site E",
+      "source": "dust",
+      "staticDescription": "Large unpaved area with loose soil"
     }
   ]
 }

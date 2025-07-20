@@ -1,0 +1,246 @@
+# openshift-deployment.yaml - Complete OpenShift deployment configuration
+apiVersion: v1
+kind: List
+metadata:
+  name: aqi-mapping-platform
+items:
+
+# Image Stream
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: aqi-mapping-platform
+    labels:
+      app: aqi-mapping-platform
+      component: frontend
+  spec:
+    lookupPolicy:
+      local: false
+
+# Build Config
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: aqi-mapping-platform
+    labels:
+      app: aqi-mapping-platform
+      component: frontend
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: aqi-mapping-platform:latest
+    source:
+      type: Git
+      git:
+        uri: https://github.com/your-username/aqi-mapping-platform.git  # Update with your repo
+        ref: main
+      contextDir: /  # Root directory
+    strategy:
+      type: Docker
+      dockerStrategy:
+        dockerfilePath: Dockerfile
+        env:
+          - name: NPM_CONFIG_LOGLEVEL
+            value: warn
+    triggers:
+      - type: ConfigChange
+      - type: GitHub
+        github:
+          secret: github-webhook-secret
+      - type: Generic
+        generic:
+          secret: generic-webhook-secret
+
+# Deployment Config
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    name: aqi-mapping-platform
+    labels:
+      app: aqi-mapping-platform
+      component: frontend
+  spec:
+    replicas: 2
+    selector:
+      app: aqi-mapping-platform
+      component: frontend
+    strategy:
+      type: Rolling
+      rollingParams:
+        updatePeriodSeconds: 1
+        intervalSeconds: 1
+        timeoutSeconds: 600
+        maxUnavailable: 25%
+        maxSurge: 25%
+    template:
+      metadata:
+        labels:
+          app: aqi-mapping-platform
+          component: frontend
+      spec:
+        containers:
+        - name: aqi-mapping-platform
+          image: aqi-mapping-platform:latest
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          env:
+          - name: NODE_ENV
+            value: production
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop:
+              - ALL
+        restartPolicy: Always
+        terminationGracePeriodSeconds: 30
+        dnsPolicy: ClusterFirst
+        securityContext:
+          runAsUser: 1001
+          fsGroup: 1001
+    triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - aqi-mapping-platform
+        from:
+          kind: ImageStreamTag
+          name: aqi-mapping-platform:latest
+
+# Service
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: aqi-mapping-platform
+    labels:
+      app: aqi-mapping-platform
+      component: frontend
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: aqi-mapping-platform
+      component: frontend
+    type: ClusterIP
+
+# Route (OpenShift's ingress)
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: aqi-mapping-platform
+    labels:
+      app: aqi-mapping-platform
+      component: frontend
+  spec:
+    host: aqi-mapping-platform.your-cluster.com  # Update with your domain
+    to:
+      kind: Service
+      name: aqi-mapping-platform
+      weight: 100
+    port:
+      targetPort: 8080-tcp
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    wildcardPolicy: None
+
+# Config Map for environment variables
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: aqi-mapping-platform-config
+    labels:
+      app: aqi-mapping-platform
+  data:
+    NODE_ENV: "production"
+    REACT_APP_API_URL: "https://api.your-domain.com"  # Update as needed
+    REACT_APP_MAP_STYLE: "osm"
+    REACT_APP_DEFAULT_CENTER_LAT: "28.6469"
+    REACT_APP_DEFAULT_CENTER_LNG: "77.3154"
+
+# Horizontal Pod Autoscaler
+- apiVersion: autoscaling/v2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    name: aqi-mapping-platform-hpa
+    labels:
+      app: aqi-mapping-platform
+  spec:
+    scaleTargetRef:
+      apiVersion: apps.openshift.io/v1
+      kind: DeploymentConfig
+      name: aqi-mapping-platform
+    minReplicas: 2
+    maxReplicas: 10
+    metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Network Policy (optional security)
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: aqi-mapping-platform-netpol
+    labels:
+      app: aqi-mapping-platform
+  spec:
+    podSelector:
+      matchLabels:
+        app: aqi-mapping-platform
+    policyTypes:
+    - Ingress
+    - Egress
+    ingress:
+    - from:
+      - namespaceSelector: {}
+      ports:
+      - protocol: TCP
+        port: 8080
+    egress:
+    - to: []  # Allow all outbound traffic

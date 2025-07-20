@@ -1,0 +1,77 @@
+# .dockerignore - Optimize Docker build by excluding unnecessary files
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs (will be generated during build)
+build
+dist
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+README.md
+.github
+
+# Testing
+coverage
+.nyc_output
+jest_*
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp
+temp
+
+# Documentation
+docs
+*.md
+
+# Docker files themselves
+Dockerfile*
+docker-compose*
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# Keep these important files:
+# !package*.json
+# !public/
+# !src/
+# !generated_data/

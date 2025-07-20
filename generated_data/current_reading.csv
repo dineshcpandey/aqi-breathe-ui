@@ -1,26 +1,17 @@
-id,station,lat,lng,timestamp,aqi,pm25,pm10,co,no2,so2,temperature,rh,windSpeed,source,severity,description
-sensor_construction_001,Building Project A,28.675248,77.299444,2025-07-20T14:30:00.000Z,114,100.8,190.4,2.37,42.5,14.4,NaN,NaN,NaN,construction,high,Building Project A - Metro construction with heavy machinery
-sensor_construction_002,Building Project B,28.676476,77.300461,2025-07-20T14:30:00.000Z,132,71.3,201.3,1.76,47,14,NaN,NaN,NaN,construction,high,Building Project B - Active construction site with concrete mixing
-sensor_construction_003,Metro Construction C,28.645423,77.272244,2025-07-20T14:30:00.000Z,161,70.2,186.5,1.68,27.5,10.5,NaN,NaN,NaN,construction,very_high,Metro Construction C - Active construction site with concrete mixing
-sensor_construction_004,Building Project D,28.641799,77.302,2025-07-20T14:30:00.000Z,105,89.7,154.1,1.68,39.8,13.2,NaN,NaN,NaN,construction,high,Building Project D - Active construction site with concrete mixing
-sensor_construction_005,Highway Expansion E,28.647976,77.285993,2025-07-20T14:30:00.000Z,102,88.5,194.6,1.5,41,16.9,NaN,NaN,NaN,construction,high,Highway Expansion E - Building project with dust and emissions
-sensor_construction_006,Highway Expansion F,28.684399,77.328358,2025-07-20T14:30:00.000Z,117,93.5,191.4,1.42,42.7,15,NaN,NaN,NaN,construction,high,Highway Expansion F - Metro construction with heavy machinery
-sensor_vehicle_001,Parking Complex A,28.644066,77.309831,2025-07-20T14:30:00.000Z,315,168.1,188.1,3.94,117.3,31,NaN,NaN,NaN,vehicle,hazardous,Parking Complex A - Highway monitoring point with diesel emissions
-sensor_vehicle_002,Bus Terminal B,28.645205,77.317345,2025-07-20T14:30:00.000Z,260,183.2,215.7,4.09,113.6,55.4,NaN,NaN,NaN,vehicle,very_high,Bus Terminal B - Major bus terminal with heavy traffic congestion
-sensor_vehicle_003,Highway Monitor C,28.652543,77.32561,2025-07-20T14:30:00.000Z,208,122.5,266.2,4.66,97.3,59.4,NaN,NaN,NaN,vehicle,very_high,Highway Monitor C - Major bus terminal with heavy traffic congestion
-sensor_vehicle_004,Parking Complex D,28.627804,77.326913,2025-07-20T14:30:00.000Z,315,119.1,204.2,7.59,136.2,56.4,NaN,NaN,NaN,vehicle,hazardous,Parking Complex D - Traffic junction with high vehicle density
-sensor_vehicle_005,Highway Monitor E,28.648303,77.314308,2025-07-20T14:30:00.000Z,293,141.7,235.3,4.51,139.2,61.4,NaN,NaN,NaN,vehicle,very_high,Highway Monitor E - Traffic junction with high vehicle density
-sensor_vehicle_006,Traffic Junction F,28.627111,77.346404,2025-07-20T14:30:00.000Z,313,183.3,378.3,4.11,164.1,33.6,NaN,NaN,NaN,vehicle,hazardous,Traffic Junction F - Traffic junction with high vehicle density
-sensor_vehicle_007,Bus Terminal G,28.648195,77.315948,2025-07-20T14:30:00.000Z,227,167,387.9,5.34,149.1,34,NaN,NaN,NaN,vehicle,very_high,Bus Terminal G - Traffic junction with high vehicle density
-sensor_vehicle_008,Parking Complex H,28.660669,77.359235,2025-07-20T14:30:00.000Z,257,149.6,219.5,6.5,121.3,47.5,NaN,NaN,NaN,vehicle,very_high,Parking Complex H - Traffic junction with high vehicle density
-sensor_dust_001,Open Ground A,28.651557,77.316549,2025-07-20T14:30:00.000Z,136,167.5,211.8,1.55,33.4,8.6,NaN,NaN,NaN,dust,high,Open Ground A - Open area with loose soil and construction debris
-sensor_dust_002,Open Ground B,28.655383,77.339251,2025-07-20T14:30:00.000Z,137,104.7,244.7,0.89,33.1,10.5,NaN,NaN,NaN,dust,high,Open Ground B - Quarry site with crushing operations
-sensor_dust_003,Vacant Plot C,28.642445,77.29295,2025-07-20T14:30:00.000Z,163,94.7,252.2,0.51,33.1,5.7,NaN,NaN,NaN,dust,very_high,Vacant Plot C - Quarry site with crushing operations
-sensor_dust_004,Vacant Plot D,28.674705,77.330271,2025-07-20T14:30:00.000Z,210,99.7,341,1.61,42.8,15.5,NaN,NaN,NaN,dust,very_high,Vacant Plot D - Riverbank area with dust storms
-sensor_industrial_001,Processing Plant A,28.617196,77.302226,2025-07-20T14:30:00.000Z,100,56.7,156.9,2.85,65.1,31.1,NaN,NaN,NaN,industrial,moderate,Processing Plant A - Factory area with processing activities
-sensor_industrial_002,Processing Plant B,28.664007,77.302783,2025-07-20T14:30:00.000Z,75,54.5,78,1.89,37.8,27.5,NaN,NaN,NaN,industrial,moderate,Processing Plant B - Industrial zone with manufacturing emissions
-sensor_industrial_003,Factory Area C,28.608383,77.336394,2025-07-20T14:30:00.000Z,96,55.4,87.3,1.02,31.8,25.6,NaN,NaN,NaN,industrial,moderate,Factory Area C - Industrial zone with manufacturing emissions
-sensor_industrial_004,Manufacturing Hub D,28.640847,77.300059,2025-07-20T14:30:00.000Z,142,94.2,146.5,1.88,62.7,33.2,NaN,NaN,NaN,industrial,high,Manufacturing Hub D - Manufacturing hub with chemical processes
-sensor_residential_001,Market Area A,28.680217,77.339177,2025-07-20T14:30:00.000Z,150,73.9,129.5,1.99,78.6,26.8,NaN,NaN,NaN,residential,high,Market Area A - Neighborhood with mixed residential sources
-sensor_residential_002,Community Center B,28.644247,77.315832,2025-07-20T14:30:00.000Z,158,66.1,186.1,3.15,79.7,16.1,NaN,NaN,NaN,residential,very_high,Community Center B - Residential area with cooking and heating
-sensor_residential_003,School Zone C,28.61931,77.337982,2025-07-20T14:30:00.000Z,144,73.2,153.5,2.53,68,16,NaN,NaN,NaN,residential,high,School Zone C - Housing complex with domestic activities
+id,lat,lng,station,source,aqi,pm25,pm10,co,no2,so2,rh,temperature,windSpeed,timestamp,severity,description
+construction_001,28.638896,77.320081,Metro Construction A,construction,93,102.1,173.6,1.83,35.3,12.4,37,24.5,5,2025-07-20T14:30:00.000Z,moderate,Metro Construction A - Metro construction with heavy machinery
+construction_002,28.651182,77.310088,Building Project B,construction,139,66.7,234.7,0.88,47.3,11.2,50,23,4.7,2025-07-20T14:30:00.000Z,moderate,Building Project B - Building project with dust and emissions
+construction_003,28.641973,77.319571,Highway Expansion C,construction,121,130.1,241.5,1.53,28.9,7.7,31,23.3,3.7,2025-07-20T14:30:00.000Z,moderate,Highway Expansion C - Highway expansion with earthmoving equipment
+construction_004,28.639545,77.312237,Active Construction D,construction,133,115.1,162,1.01,27.5,8.7,40,25,3.2,2025-07-20T14:30:00.000Z,moderate,Active Construction D - Active construction site with concrete mixing
+construction_005,28.634781,77.325225,Industrial Building Site E,construction,108,82.3,159,1.22,21.3,6.1,45,23.4,4.7,2025-07-20T14:30:00.000Z,moderate,Industrial Building Site E - Metro construction with heavy machinery
+vehicle_006,28.64288,77.321296,Bus Terminal A,vehicle,225,97.1,175,4.24,67.6,34.3,33,25.1,4.1,2025-07-20T14:30:00.000Z,very_high,Bus Terminal A - Major bus terminal with heavy traffic congestion
+vehicle_007,28.640373,77.31577,Traffic Junction B,vehicle,155,84.5,103.8,5.49,67.2,37.8,33,22,5.3,2025-07-20T14:30:00.000Z,high,Traffic Junction B - Traffic junction with high vehicle density
+vehicle_008,28.647326,77.315589,Highway Monitor C,vehicle,197,79.1,202.1,3.39,61.6,22.3,50,23.5,3.1,2025-07-20T14:30:00.000Z,high,Highway Monitor C - Highway monitoring point with diesel emissions
+vehicle_009,28.64988,77.316929,Parking Complex D,vehicle,144,137.5,111.8,5.04,86.2,24,38,22.4,5.7,2025-07-20T14:30:00.000Z,moderate,Parking Complex D - Parking complex with vehicle idling
+vehicle_010,28.638183,77.327784,Bus Terminal E,vehicle,223,119.4,196.6,5.28,58.1,32.6,33,25.2,4.5,2025-07-20T14:30:00.000Z,very_high,Bus Terminal E - Major bus terminal with heavy traffic congestion
+vehicle_011,28.64367,77.314382,Traffic Junction F,vehicle,133,70,124.1,2.94,76.4,26,45,21.6,3.8,2025-07-20T14:30:00.000Z,moderate,Traffic Junction F - Traffic junction with high vehicle density
+dust_012,28.640743,77.310123,Open Ground A,dust,108,101.7,166.5,0.45,22.1,10.1,50,22.7,4,2025-07-20T14:30:00.000Z,moderate,Open Ground A - Large unpaved area with loose soil
+dust_013,28.635989,77.294113,Vacant Plot B,dust,128,126.2,281.8,0.49,18.8,4.7,42,21,3.8,2025-07-20T14:30:00.000Z,moderate,Vacant Plot B - Vacant plot with exposed soil and debris
+dust_014,28.664819,77.329101,Quarry Site C,dust,103,93.5,111.1,0.74,16.6,3.8,45,22.6,3,2025-07-20T14:30:00.000Z,moderate,Quarry Site C - Quarry site with crushing operations
+dust_015,28.64066,77.32603,Unpaved Area D,dust,90,91.7,180,0.66,21.1,4.8,45,21.1,4.3,2025-07-20T14:30:00.000Z,moderate,Unpaved Area D - Open area with construction debris
+dust_016,28.641995,77.31839,Demolished Building Site E,dust,158,124.4,261.4,0.84,22.2,9.1,47,20.9,2.7,2025-07-20T14:30:00.000Z,high,Demolished Building Site E - Large unpaved area with loose soil

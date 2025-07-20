@@ -1,11 +1,12 @@
-// src/App.js - Updated with Select Option Support
+// src/App.js - Updated with CSV Data Loading
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
 import EnhancedFilterPane from './components/FilterPane/EnhancedFilterPane';
 import { useFilters } from './hooks/useFilters';
 import { generateSampleEnhancedGridData, POLLUTANT_COLOR_SCHEMES, POLLUTION_SOURCES } from './utils/enhancedGridGenerator';
-import { anandViharAQIData } from './utils/dummyData'; // Import sensor data
+import { anandViharAQIData } from './utils/dummyData'; // Keep as fallback
+import externalDataLoader from './utils/externalDataLoader'; // Add CSV loader
 import './App.css';
 
 function App() {
@@ -13,7 +14,12 @@ function App() {
   const [enhancedGridData, setEnhancedGridData] = useState(null);
   const [selectedMapStyle, setSelectedMapStyle] = useState('osm');
   const [showDataLayer, setShowDataLayer] = useState(false);
-  const [selectedPollutant, setSelectedPollutant] = useState('select'); // Changed default to 'select'
+  const [selectedPollutant, setSelectedPollutant] = useState('select');
+
+  // NEW: Sensor data state
+  const [sensorData, setSensorData] = useState([]);
+  const [isLoadingSensorData, setIsLoadingSensorData] = useState(true);
+  const [sensorDataSource, setSensorDataSource] = useState('dummy'); // 'csv' or 'dummy'
 
   // Enhanced filters hook with sensor support
   const {
@@ -30,9 +36,9 @@ function App() {
     getFilterStats
   } = useFilters();
 
-  // Load enhanced grid data and sensor data on component mount
+  // Load enhanced grid data on component mount
   useEffect(() => {
-    console.log('=== App: Loading enhanced grid data and sensor data ===');
+    console.log('=== App: Loading enhanced grid data ===');
 
     // Load grid data
     const gridData = generateSampleEnhancedGridData();
@@ -41,17 +47,56 @@ function App() {
     console.log(`Generated ${gridData.grids.length} enhanced grid cells`);
     console.log('Enhanced data metadata:', gridData.metadata);
     console.log('Sample grid with contributions:', gridData.grids[0]);
+  }, []);
 
-    // Log sensor data
-    console.log(`Loaded ${anandViharAQIData.length} sensor stations`);
-    console.log('Sample sensor data:', anandViharAQIData[0]);
+  // Load sensor data from CSV (with fallback to dummy data)
+  useEffect(() => {
+    const loadSensorData = async () => {
+      console.log('=== App: Loading sensor data ===');
+      setIsLoadingSensorData(true);
 
-    // Group sensors by source for debugging
-    const sensorsBySource = anandViharAQIData.reduce((acc, sensor) => {
-      acc[sensor.source] = (acc[sensor.source] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('Sensors by source:', sensorsBySource);
+      try {
+        // Try to load from generated CSV first
+        console.log('Attempting to load from CSV: generated_data/current_reading.csv');
+        const csvData = await externalDataLoader.loadSensorDataFromCSV('generated_data/current_reading.csv');
+
+        if (csvData && csvData.length > 0) {
+          console.log(`✅ Successfully loaded ${csvData.length} sensors from CSV`);
+          setSensorData(csvData);
+          setSensorDataSource('csv');
+
+          // Log sensor distribution
+          const sensorsBySource = csvData.reduce((acc, sensor) => {
+            acc[sensor.source] = (acc[sensor.source] || 0) + 1;
+            return acc;
+          }, {});
+          console.log('CSV sensor distribution:', sensorsBySource);
+          console.log('Sample CSV sensor:', csvData[0]);
+        } else {
+          throw new Error('No sensor data found in CSV');
+        }
+
+      } catch (error) {
+        console.warn('⚠️ Failed to load CSV data, falling back to dummy data');
+        console.warn('Error details:', error.message);
+
+        // Fallback to dummy data
+        console.log(`📋 Using dummy data: ${anandViharAQIData.length} sensors`);
+        setSensorData(anandViharAQIData);
+        setSensorDataSource('dummy');
+
+        // Log dummy data distribution
+        const dummyBySource = anandViharAQIData.reduce((acc, sensor) => {
+          acc[sensor.source] = (acc[sensor.source] || 0) + 1;
+          return acc;
+        }, {});
+        console.log('Dummy sensor distribution:', dummyBySource);
+      } finally {
+        setIsLoadingSensorData(false);
+      }
+    };
+
+    loadSensorData();
   }, []);
 
   // Process filtered data and calculate statistics
@@ -64,8 +109,8 @@ function App() {
   } = React.useMemo(() => {
     console.log('=== App: Recomputing filtered data ===');
 
-    if (!enhancedGridData) {
-      console.log('No enhanced grid data available');
+    if (!enhancedGridData || !sensorData.length) {
+      console.log('No enhanced grid data or sensor data available');
       return {
         selectedSources: [],
         pollutantStats: {},
@@ -141,7 +186,7 @@ function App() {
     }
 
     // Filter sensor data based on active sensor filters
-    let processedSensorData = [...anandViharAQIData];
+    let processedSensorData = [...sensorData]; // Use dynamic sensor data
 
     // Apply source filters
     if (activeSensorFilters.source && Object.keys(activeSensorFilters.source).length > 0) {
@@ -172,7 +217,7 @@ function App() {
       visibleGridCount: visibleCount,
       filteredSensorData: processedSensorData
     };
-  }, [enhancedGridData, getActiveFilters, getActiveSensorFilters, selectedPollutant]);
+  }, [enhancedGridData, sensorData, getActiveFilters, getActiveSensorFilters, selectedPollutant]);
 
   // Auto-enable data layer when pollutant is selected (not 'select')
   useEffect(() => {
@@ -209,12 +254,55 @@ function App() {
     console.log('Filtered Sensors:', filteredSensorData.length);
     console.log('Filter Pane Visible:', isFilterPaneVisible);
     console.log('Filter Stats:', filterStats);
-  }, [selectedPollutant, selectedSources, showDataLayer, showSensors, visibleGridCount,
-    filteredSensorData.length, isFilterPaneVisible, filterStats]);
+    console.log('Sensor Data Source:', sensorDataSource);
+    console.log('Loading Sensors:', isLoadingSensorData);
+  }, [selectedPollutant, selectedSources, showDataLayer,
+    showSensors, visibleGridCount,
+    filteredSensorData.length, isFilterPaneVisible, filterStats, sensorDataSource, isLoadingSensorData]);
+
+  // Show loading state while sensor data is loading
+  if (isLoadingSensorData) {
+    return (
+      <div className="app">
+        <Header />
+        <div className="loading-container" style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '70vh',
+          fontSize: '18px',
+          color: '#666'
+        }}>
+          <div>
+            <div>🔄 Loading sensor data...</div>
+            <div style={{ fontSize: '14px', marginTop: '10px' }}>
+              Attempting to load from generated_data/current_reading.csv
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
       <Header />
+
+      {/* Data Source Indicator */}
+      <div className="data-source-indicator" style={{
+        position: 'fixed',
+        top: '60px',
+        right: '20px',
+        zIndex: 1000,
+        background: sensorDataSource === 'csv' ? '#4CAF50' : '#FF9800',
+        color: 'white',
+        padding: '5px 10px',
+        borderRadius: '15px',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }}>
+        {sensorDataSource === 'csv' ? '📊 CSV Data' : '📋 Demo Data'} • {sensorData.length} sensors
+      </div>
 
       <EnhancedFilterPane
         filters={filters}
@@ -225,8 +313,8 @@ function App() {
         onPollutantChange={handlePollutantChange}
         pollutantStats={pollutantStats}
         sourceStats={sourceStats}
-        // New sensor-related props
-        sensorData={anandViharAQIData}
+        // Updated sensor-related props to use dynamic data
+        sensorData={sensorData}
         showSensors={showSensors}
         onSensorToggle={toggleSensors}
         sensorFilters={sensorFilters}
@@ -245,7 +333,7 @@ function App() {
         sourceStats={sourceStats}
         filtersVisible={isFilterPaneVisible}
         visibleGridCount={visibleGridCount}
-        // New sensor-related props
+        // Updated sensor-related props to use dynamic data
         sensorData={filteredSensorData}
         showSensors={showSensors}
         sensorFilters={sensorFilters}

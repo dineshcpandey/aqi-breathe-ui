@@ -17,8 +17,8 @@ const CONFIG = {
         construction: 5,
         vehicle: 6,
         dust: 5,
-        industrial: 4,  // Keep 0 for now to match current system
-        residential: 8  // Keep 0 for now to match current system
+        industrial: 0,  // Keep 0 for now to match current system
+        residential: 0  // Keep 0 for now to match current system
     },
 
     // Time series configuration
@@ -328,6 +328,31 @@ function generateTimeSeriesData(sensors, startDate, endDate, dataType) {
     return readings;
 }
 
+// Generate time series grid data (for historical/predicted)
+function generateTimeSeriesGridData(sensors, startDate, endDate, dataType) {
+    console.log(`🏗️ Generating ${dataType} grid data from ${startDate} to ${endDate}...`);
+
+    const allGridData = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const intervalMs = CONFIG.timeConfig.intervalMinutes * 60 * 1000;
+
+    let currentTime = new Date(start);
+    let totalGridCells = 0;
+
+    while (currentTime <= end) {
+        const gridData = generateGridData(sensors, currentTime.toISOString(), dataType);
+        allGridData.push(...gridData);
+        totalGridCells += gridData.length;
+
+        currentTime = new Date(currentTime.getTime() + intervalMs);
+    }
+
+    const timestamps = Math.round(totalGridCells / (allGridData.length > 0 ? allGridData.filter(g => g.timestamp === allGridData[0].timestamp).length : 1));
+    console.log(`   Generated ${totalGridCells} grid cells (${timestamps} timestamps)`);
+    return allGridData;
+}
+
 // Generate grid data (compatible with your current grid system)
 function generateGridData(sensors, datetime, dataType = 'current') {
     console.log(`🏗️ Generating ${dataType} grid data...`);
@@ -568,7 +593,7 @@ function saveSensorLocations(sensors) {
 }
 
 // Generate data summary
-function generateDataSummary(currentData, historicalData, predictedData) {
+function generateDataSummary(currentData, historicalData, predictedData, currentGridData, historicalGridData, predictedGridData) {
     console.log('\n📊 Data Generation Summary:');
     console.log('=====================================');
 
@@ -582,13 +607,25 @@ function generateDataSummary(currentData, historicalData, predictedData) {
         console.log(`   ${source}: ${count} sensors`);
     });
 
-    console.log('\n📈 Data Volumes:');
+    console.log('\n📈 Sensor Data Volumes:');
     console.log(`   Current readings: ${currentData.length}`);
     console.log(`   Historical readings: ${historicalData.length}`);
     console.log(`   Predicted readings: ${predictedData.length}`);
 
+    console.log('\n🏗️ Grid Data Volumes:');
+    console.log(`   Current grid cells: ${currentGridData.length}`);
+    console.log(`   Historical grid cells: ${historicalGridData.length}`);
+    console.log(`   Predicted grid cells: ${predictedGridData.length}`);
+
     const avgAQI = Math.round(currentData.reduce((sum, r) => sum + r.aqi, 0) / currentData.length);
     console.log(`\n🌫️ Current Average AQI: ${avgAQI}`);
+
+    // Calculate time series info
+    const historicalHours = Math.round(historicalData.length / currentData.length);
+    const predictedHours = Math.round(predictedData.length / currentData.length);
+    console.log(`\n⏰ Time Series Coverage:`);
+    console.log(`   Historical: ${historicalHours} hours (${CONFIG.timeConfig.intervalMinutes}min intervals)`);
+    console.log(`   Predicted: ${predictedHours} hours (${CONFIG.timeConfig.intervalMinutes}min intervals)`);
 }
 
 // Main execution function
@@ -627,7 +664,16 @@ async function main() {
         );
         saveCSV(historicalData, CONFIG.output.files.historical);
 
-        // Step 5: Generate predicted sensor data
+        // Step 5: Generate historical grid data
+        const historicalGridData = generateTimeSeriesGridData(
+            sensors,
+            CONFIG.timeConfig.historicalStart,
+            CONFIG.timeConfig.historicalEnd,
+            'historical'
+        );
+        saveGridCSV(historicalGridData, CONFIG.output.files.gridHistorical);
+
+        // Step 6: Generate predicted sensor data
         const predictedData = generateTimeSeriesData(
             sensors,
             CONFIG.timeConfig.predictedStart,
@@ -636,8 +682,17 @@ async function main() {
         );
         saveCSV(predictedData, CONFIG.output.files.predicted);
 
-        // Step 6: Generate summary
-        generateDataSummary(currentData, historicalData, predictedData);
+        // Step 7: Generate predicted grid data
+        const predictedGridData = generateTimeSeriesGridData(
+            sensors,
+            CONFIG.timeConfig.predictedStart,
+            CONFIG.timeConfig.predictedEnd,
+            'predicted'
+        );
+        saveGridCSV(predictedGridData, CONFIG.output.files.gridPredicted);
+
+        // Step 8: Generate summary
+        generateDataSummary(currentData, historicalData, predictedData, currentGridData, historicalGridData, predictedGridData);
 
         console.log('\n✅ Compatible data generation completed successfully!');
         console.log(`📁 Files saved in: ${CONFIG.output.folder}`);
@@ -645,14 +700,16 @@ async function main() {
         console.log(`   ${CONFIG.output.files.current} - Current sensor readings (${currentData.length} records)`);
         console.log(`   ${CONFIG.output.files.gridCurrent} - Current grid data (${currentGridData.length} cells)`);
         console.log(`   ${CONFIG.output.files.historical} - Historical sensor data (${historicalData.length} records)`);
+        console.log(`   ${CONFIG.output.files.gridHistorical} - Historical grid data (${historicalGridData.length} cells)`);
         console.log(`   ${CONFIG.output.files.predicted} - Predicted sensor data (${predictedData.length} records)`);
+        console.log(`   ${CONFIG.output.files.gridPredicted} - Predicted grid data (${predictedGridData.length} cells)`);
         console.log(`   ${CONFIG.output.files.sensors} - Sensor location metadata`);
 
         console.log('\n🎯 Next Steps:');
         console.log('1. Test current_reading.csv with your visualization first');
         console.log('2. Verify sensor data displays correctly on the map');
         console.log('3. Then integrate historical and predicted data later');
-        console.log('4. Optional: Use grid_current.csv to enhance your grid system');
+        console.log('4. Optional: Use grid CSV files to enhance your grid system with time series data');
 
     } catch (error) {
         console.error('❌ Error during data generation:', error.message);
@@ -668,7 +725,8 @@ module.exports = {
     generateStaticSensors,
     generateCurrentData,
     generateTimeSeriesData,
-    generateGridData
+    generateGridData,
+    generateTimeSeriesGridData
 };
 
 // Run if called directly

@@ -7,140 +7,140 @@
     },
     "radiusKm": 2.5,
     "totalSensors": 16,
-    "generatedAt": "2025-07-20T17:20:42.349Z",
+    "generatedAt": "2025-07-20T18:22:31.684Z",
     "distribution": {
       "construction": 5,
       "vehicle": 6,
       "dust": 5,
-      "industrial": 4,
-      "residential": 8
+      "industrial": 0,
+      "residential": 0
     }
   },
   "sensors": [
     {
       "id": "construction_001",
-      "lat": 28.638896,
-      "lng": 77.320081,
+      "lat": 28.639331,
+      "lng": 77.321066,
       "station": "Metro Construction A",
       "source": "construction",
       "staticDescription": "Metro construction with heavy machinery"
     },
     {
       "id": "construction_002",
-      "lat": 28.651182,
-      "lng": 77.310088,
+      "lat": 28.637321,
+      "lng": 77.31774,
       "station": "Building Project B",
       "source": "construction",
       "staticDescription": "Building project with dust and emissions"
     },
     {
       "id": "construction_003",
-      "lat": 28.641973,
-      "lng": 77.319571,
+      "lat": 28.646975,
+      "lng": 77.296802,
       "station": "Highway Expansion C",
       "source": "construction",
       "staticDescription": "Highway expansion with earthmoving equipment"
     },
     {
       "id": "construction_004",
-      "lat": 28.639545,
-      "lng": 77.312237,
+      "lat": 28.649373,
+      "lng": 77.318493,
       "station": "Active Construction D",
       "source": "construction",
       "staticDescription": "Active construction site with concrete mixing"
     },
     {
       "id": "construction_005",
-      "lat": 28.634781,
-      "lng": 77.325225,
+      "lat": 28.642822,
+      "lng": 77.301762,
       "station": "Industrial Building Site E",
       "source": "construction",
       "staticDescription": "Metro construction with heavy machinery"
     },
     {
       "id": "vehicle_006",
-      "lat": 28.64288,
-      "lng": 77.321296,
+      "lat": 28.627293,
+      "lng": 77.321795,
       "station": "Bus Terminal A",
       "source": "vehicle",
       "staticDescription": "Major bus terminal with heavy traffic congestion"
     },
     {
       "id": "vehicle_007",
-      "lat": 28.640373,
-      "lng": 77.31577,
+      "lat": 28.643984,
+      "lng": 77.306297,
       "station": "Traffic Junction B",
       "source": "vehicle",
       "staticDescription": "Traffic junction with high vehicle density"
     },
     {
       "id": "vehicle_008",
-      "lat": 28.647326,
-      "lng": 77.315589,
+      "lat": 28.653835,
+      "lng": 77.327941,
       "station": "Highway Monitor C",
       "source": "vehicle",
       "staticDescription": "Highway monitoring point with diesel emissions"
     },
     {
       "id": "vehicle_009",
-      "lat": 28.64988,
-      "lng": 77.316929,
+      "lat": 28.640311,
+      "lng": 77.31886,
       "station": "Parking Complex D",
       "source": "vehicle",
       "staticDescription": "Parking complex with vehicle idling"
     },
     {
       "id": "vehicle_010",
-      "lat": 28.638183,
-      "lng": 77.327784,
+      "lat": 28.647926,
+      "lng": 77.326581,
       "station": "Bus Terminal E",
       "source": "vehicle",
       "staticDescription": "Major bus terminal with heavy traffic congestion"
     },
     {
       "id": "vehicle_011",
-      "lat": 28.64367,
-      "lng": 77.314382,
+      "lat": 28.632492,
+      "lng": 77.299992,
       "station": "Traffic Junction F",
       "source": "vehicle",
       "staticDescription": "Traffic junction with high vehicle density"
     },
     {
       "id": "dust_012",
-      "lat": 28.640743,
-      "lng": 77.310123,
+      "lat": 28.639283,
+      "lng": 77.298179,
       "station": "Open Ground A",
       "source": "dust",
       "staticDescription": "Large unpaved area with loose soil"
     },
     {
       "id": "dust_013",
-      "lat": 28.635989,
-      "lng": 77.294113,
+      "lat": 28.631764,
+      "lng": 77.332845,
       "station": "Vacant Plot B",
       "source": "dust",
       "staticDescription": "Vacant plot with exposed soil and debris"
     },
     {
       "id": "dust_014",
-      "lat": 28.664819,
-      "lng": 77.329101,
+      "lat": 28.634682,
+      "lng": 77.31235,
       "station": "Quarry Site C",
       "source": "dust",
       "staticDescription": "Quarry site with crushing operations"
     },
     {
       "id": "dust_015",
-      "lat": 28.64066,
-      "lng": 77.32603,
+      "lat": 28.647421,
+      "lng": 77.316557,
       "station": "Unpaved Area D",
       "source": "dust",
       "staticDescription": "Open area with construction debris"
     },
     {
       "id": "dust_016",
-      "lat": 28.641995,
-      "lng": 77.31839,
+      "lat": 28.639001,
+      "lng": 77.336353,
       "station": "Demolished Building Site E",
       "source": "dust",
       "staticDescription": "Large unpaved area with loose soil"

@@ -1,36 +1,22 @@
-# Simple Dockerfile for OpenShift - runs npm start
-FROM node:18-alpine
+# Use a base image with Node.js
+FROM node:18
 
-# Set working directory
+# Create app directory
 WORKDIR /app
 
-# Copy package files first (for better caching)
+# Copy package.json and install dependencies
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy all source files
-COPY . .
-
-# Copy generated data to public folder so React can serve it
-COPY generated_data/ ./public/generated_data/
-
-# Create non-root user for OpenShift compatibility
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G appgroup -g appgroup appuser && \
-    chown -R appuser:appgroup /app
-
-# Switch to non-root user
+# Set the user (OpenShift typically uses user ID 1001)
+RUN chown -R 1001:1001 /app
 USER 1001
 
-# Expose port 3000 (React default)
-EXPOSE 3000
+# Copy the rest of the application
+COPY --chown=1001:1001 . .
 
-# Set environment variables
-ENV NODE_ENV=development
-ENV PORT=3000
-ENV HOST=0.0.0.0
+# Disable eslint caching if needed
+ENV DISABLE_ESLINT_PLUGIN=true
 
-# Start the React development server
+# Start the app
 CMD ["npm", "start"]

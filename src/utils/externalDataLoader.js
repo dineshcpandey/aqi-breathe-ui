@@ -1,332 +1,243 @@
-// src/utils/externalDataLoader.js - COMPLETE VERSION with ALL original functionality
+// src/utils/externalDataLoader.js - FIXED VERSION (Safe API handling)
 import Papa from 'papaparse';
 
-export class ExternalDataLoader {
+class ExternalDataLoader {
     constructor() {
         this.cache = new Map();
-        this.timeSeriesCache = new Map();
     }
 
     /**
-     * Load sensor data from external JSON file
+     * 🔧 FIXED: Load sensor data from CSV with safe API checking
      */
-    async loadSensorDataFromJSON(filename) {
+    async loadSensorDataFromCSV(filePath) {
         try {
-            console.log(`Loading sensor data from: ${filename}`);
+            console.log(`📂 SAFE External: Attempting to load sensor data from ${filePath}`);
 
-            const fileContent = await window.fs.readFile(filename, { encoding: 'utf8' });
-            const data = JSON.parse(fileContent);
+            // Check what APIs are available
+            console.log('🔍 SAFE External: API availability check:');
+            console.log('  window exists:', typeof window !== 'undefined');
+            console.log('  window.fs exists:', typeof window !== 'undefined' && !!window.fs);
+            console.log('  window.fs.readFile exists:', typeof window !== 'undefined' && window.fs && typeof window.fs.readFile === 'function');
+            console.log('  fetch available:', typeof fetch !== 'undefined');
 
-            // Validate and transform data
-            const transformedData = this.transformSensorData(data);
+            let csvContent = '';
 
-            // Cache the data
-            this.cache.set(filename, {
-                data: transformedData,
-                timestamp: Date.now(),
-                type: 'json'
-            });
+            // Method 1: Try window.fs with proper null checking
+            if (typeof window !== 'undefined' &&
+                window.fs &&
+                typeof window.fs.readFile === 'function') {
 
-            console.log(`Loaded ${transformedData.length} sensor stations from JSON`);
-            return transformedData;
+                console.log('📂 SAFE External: Using window.fs API');
+                try {
+                    csvContent = await window.fs.readFile(filePath, { encoding: 'utf8' });
+                    console.log(`✅ SAFE External: Loaded via window.fs, size: ${csvContent.length} chars`);
+                } catch (fsError) {
+                    console.warn('⚠️ SAFE External: window.fs failed:', fsError.message);
+                    throw fsError;
+                }
+            }
+            // Method 2: Try fetch API  
+            else if (typeof fetch === 'function') {
+                console.log('📂 SAFE External: Using fetch API');
+                const response = await fetch(`/${filePath}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                csvContent = await response.text();
+                console.log(`✅ SAFE External: Loaded via fetch, size: ${csvContent.length} chars`);
+            }
+            // No methods available
+            else {
+                throw new Error('No file loading methods available (neither window.fs nor fetch)');
+            }
+
+            // Validate content
+            if (!csvContent || csvContent.length < 10) {
+                throw new Error(`Invalid or empty CSV content (${csvContent.length} chars)`);
+            }
+
+            // Parse CSV safely
+            const sensorData = await this.parseCSVSafely(csvContent, filePath);
+
+            console.log(`✅ SAFE External: Successfully loaded ${sensorData.length} sensors from ${filePath}`);
+            return sensorData;
 
         } catch (error) {
-            console.error(`Failed to load JSON data from ${filename}:`, error);
+            console.error(`❌ SAFE External: Failed to load CSV data from ${filePath}:`, error);
             throw error;
         }
     }
 
     /**
-     * Load sensor data from external CSV file
+     * 🔧 SAFE: Parse CSV with proper error handling
      */
-    async loadSensorDataFromCSV(filename) {
-        try {
-            console.log(`Loading sensor data from: ${filename}`);
+    async parseCSVSafely(csvContent, filePath) {
+        return new Promise((resolve, reject) => {
+            console.log(`📊 SAFE External: Parsing CSV content for ${filePath}...`);
 
-            const fileContent = await window.fs.readFile(filename, { encoding: 'utf8' });
-
-            return new Promise((resolve, reject) => {
-                Papa.parse(fileContent, {
-                    header: true,
-                    dynamicTyping: true,
-                    skipEmptyLines: true,
-                    delimitersToGuess: [',', '\t', '|', ';'],
-                    complete: (results) => {
-                        try {
-                            if (results.errors.length > 0) {
-                                console.warn('CSV parsing warnings:', results.errors);
-                            }
-
-                            const transformedData = this.transformSensorData(results.data);
-
-                            // Cache the data
-                            this.cache.set(filename, {
-                                data: transformedData,
-                                timestamp: Date.now(),
-                                type: 'csv'
-                            });
-
-                            console.log(`Loaded ${transformedData.length} sensor stations from CSV`);
-                            resolve(transformedData);
-
-                        } catch (error) {
-                            reject(error);
+            Papa.parse(csvContent, {
+                header: true,
+                dynamicTyping: false,
+                skipEmptyLines: true,
+                delimitersToGuess: [',', '\t', '|', ';'],
+                complete: (results) => {
+                    try {
+                        // Safe access to results
+                        if (!results) {
+                            throw new Error('No results object returned from Papa Parse');
                         }
-                    },
-                    error: (error) => {
+
+                        if (!results.data || !Array.isArray(results.data)) {
+                            throw new Error('Invalid data structure in Papa Parse results');
+                        }
+
+                        const rawData = results.data;
+                        console.log(`📊 SAFE External: Parsed ${rawData.length} rows from ${filePath}`);
+
+                        // Show parsing warnings
+                        if (results.errors && results.errors.length > 0) {
+                            console.warn(`⚠️ SAFE External: Parse warnings for ${filePath}:`, results.errors.slice(0, 3));
+                        }
+
+                        // Process sensor data
+                        const processedSensors = this.processSensorRows(rawData);
+                        resolve(processedSensors);
+
+                    } catch (error) {
+                        console.error(`❌ SAFE External: Error processing Papa Parse results:`, error);
                         reject(error);
                     }
-                });
+                },
+                error: (error) => {
+                    console.error(`❌ SAFE External: Papa Parse error:`, error);
+                    reject(new Error(`Papa Parse failed: ${error.message || error}`));
+                }
             });
-
-        } catch (error) {
-            console.error(`Failed to load CSV data from ${filename}:`, error);
-            throw error;
-        }
+        });
     }
 
     /**
-     * Transform and validate sensor data to match expected format
+     * Process sensor rows with validation
      */
-    transformSensorData(rawData) {
-        if (!Array.isArray(rawData)) {
-            throw new Error('Expected array of sensor data');
+    processSensorRows(rawData) {
+        if (!rawData || rawData.length === 0) {
+            console.warn('⚠️ SAFE External: No raw sensor data to process');
+            return [];
         }
 
-        return rawData.map((sensor, index) => {
-            // Handle different field name variations
-            const transformedSensor = {
-                id: sensor.id || sensor.station_id || sensor.sensorId || `sensor_${index}`,
-                lat: this.parseFloat(sensor.lat || sensor.latitude || sensor.Latitude),
-                lng: this.parseFloat(sensor.lng || sensor.longitude || sensor.Longitude),
-                station: sensor.station || sensor.station_name || sensor.name || sensor.Station || `Station ${index + 1}`,
+        console.log(`🔄 SAFE External: Processing ${rawData.length} sensor rows...`);
 
-                // Pollutant readings
-                aqi: this.parseFloat(sensor.aqi || sensor.AQI || 0),
-                pm25: this.parseFloat(sensor.pm25 || sensor.PM25 || sensor['PM2.5'] || 0),
-                pm10: this.parseFloat(sensor.pm10 || sensor.PM10 || 0),
-                co: this.parseFloat(sensor.co || sensor.CO || 0),
-                no2: this.parseFloat(sensor.no2 || sensor.NO2 || 0),
-                so2: this.parseFloat(sensor.so2 || sensor.SO2 || 0),
+        let validCount = 0;
+        const processedSensors = rawData.map((row, index) => {
+            try {
+                // Validate row structure
+                if (!row || typeof row !== 'object') {
+                    if (index < 3) console.warn(`⚠️ SAFE External: Invalid row ${index}:`, row);
+                    return null;
+                }
 
-                // Environmental data
-                rh: this.parseFloat(sensor.rh || sensor.humidity || sensor.Humidity || 45),
-                temperature: this.parseFloat(sensor.temperature || sensor.temp || sensor.Temperature || 25),
-                windSpeed: this.parseFloat(sensor.windSpeed || sensor.wind_speed || sensor.WindSpeed || 2),
+                // Parse coordinates with multiple possible column names
+                const lat = this.parseFloatSafe(row.lat || row.latitude || row.Lat || row.Latitude);
+                const lng = this.parseFloatSafe(row.lng || row.longitude || row.Lng || row.Longitude);
 
-                // Metadata
-                source: this.determineSource(sensor),
-                severity: this.calculateSeverity(sensor.aqi || 0),
-                timestamp: sensor.timestamp || new Date().toISOString(),
-                description: sensor.description || `${sensor.station || 'Unknown'} monitoring station`
-            };
+                // Validate coordinates
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                    if (index < 3) {
+                        console.warn(`⚠️ SAFE External: Invalid coordinates in row ${index}:`, {
+                            lat: row.lat || row.latitude,
+                            lng: row.lng || row.longitude,
+                            parsed: { lat, lng }
+                        });
+                    }
+                    return null;
+                }
 
-            // Validate required fields
-            if (isNaN(transformedSensor.lat) || isNaN(transformedSensor.lng)) {
-                console.warn(`Invalid coordinates for sensor ${index}:`, sensor);
-                return null;
-            }
+                // Build sensor object
+                const sensor = {
+                    id: row.id || row.sensor_id || `sensor_${index}`,
+                    station: row.station || row.name || row.station_name || `Station ${index + 1}`,
+                    lat: lat,
+                    lng: lng,
 
-            return transformedSensor;
-        }).filter(sensor => sensor !== null);
-    }
+                    // Pollutant readings with multiple possible column names
+                    aqi: this.parseFloatSafe(row.aqi || row.AQI || row.air_quality_index),
+                    pm25: this.parseFloatSafe(row.pm25 || row.PM25 || row['PM2.5'] || row.pm2_5),
+                    pm10: this.parseFloatSafe(row.pm10 || row.PM10),
+                    co: this.parseFloatSafe(row.co || row.CO || row.carbon_monoxide),
+                    no2: this.parseFloatSafe(row.no2 || row.NO2 || row.nitrogen_dioxide),
+                    so2: this.parseFloatSafe(row.so2 || row.SO2 || row.sulfur_dioxide),
 
-    /**
-     * Generate time series data for specific date range (July 15-20, 2025)
-     * with 15-minute intervals
-     */
-    generateTimeSeriesData(baseSensorData, startDate = '2025-07-15', endDate = '2025-07-20') {
-        const cacheKey = `timeseries_${startDate}_${endDate}_15min`;
+                    // Environmental data
+                    temperature: this.parseFloatSafe(row.temperature || row.temp || row.Temperature, 25),
+                    humidity: this.parseFloatSafe(row.humidity || row.rh || row.relative_humidity, 50),
+                    windSpeed: this.parseFloatSafe(row.windSpeed || row.wind_speed || row.WindSpeed, 2),
 
-        if (this.timeSeriesCache.has(cacheKey)) {
-            console.log('Returning cached time series data');
-            return this.timeSeriesCache.get(cacheKey);
-        }
+                    // Additional properties
+                    source: row.source || this.determineSourceFromName(row.station || row.name || ''),
+                    severity: row.severity || this.calculateSeverity(this.parseFloatSafe(row.aqi || row.AQI)),
+                    description: row.description || `${row.station || row.name || 'Unknown'} monitoring station`,
+                    timestamp: row.timestamp || row.last_updated || new Date().toISOString(),
 
-        console.log(`Generating time series data from ${startDate} to ${endDate} (15-min intervals)`);
-
-        const start = new Date(`${startDate}T00:00:00Z`);
-        const end = new Date(`${endDate}T23:59:59Z`);
-        const intervalMinutes = 15;
-        const intervalMs = intervalMinutes * 60 * 1000;
-
-        const timeSeriesData = baseSensorData.map(sensor => {
-            const sensorTimeSeries = [];
-
-            for (let currentTime = start.getTime(); currentTime <= end.getTime(); currentTime += intervalMs) {
-                const timestamp = new Date(currentTime);
-                const hour = timestamp.getUTCHours();
-                const dayOfWeek = timestamp.getUTCDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                // Generate realistic variations based on time patterns
-                const timeBasedMultiplier = this.getVariationMultiplier(hour, isWeekend);
-                const seasonalFactor = 1.2; // July factor for Delhi
-
-                // Apply variations to different pollutants
-                const windVariation = this.getWindVariation(hour, seasonalFactor);
-                const humidityVariation = this.getHumidityVariation(hour, seasonalFactor);
-                const temperatureVariation = this.getTemperatureVariation(hour, seasonalFactor);
-
-                const dataPoint = {
-                    timestamp: timestamp.toISOString(),
-                    aqi: Math.max(25, Math.round(sensor.aqi * timeBasedMultiplier * (0.9 + Math.random() * 0.2))),
-                    pm25: Math.max(5, Math.round(sensor.pm25 * timeBasedMultiplier * (0.85 + Math.random() * 0.3))),
-                    pm10: Math.max(10, Math.round(sensor.pm10 * timeBasedMultiplier * (0.8 + Math.random() * 0.4))),
-                    co: Math.max(0.1, +(sensor.co * timeBasedMultiplier * (0.7 + Math.random() * 0.6)).toFixed(2)),
-                    no2: Math.max(5, Math.round(sensor.no2 * timeBasedMultiplier * (0.75 + Math.random() * 0.5))),
-                    so2: Math.max(2, Math.round(sensor.so2 * timeBasedMultiplier * (0.6 + Math.random() * 0.8))),
-
-                    // Environmental variations
-                    rh: Math.max(20, Math.min(95, Math.round(sensor.rh + humidityVariation))),
-                    temperature: Math.max(15, Math.min(50, Math.round(sensor.temperature + temperatureVariation))),
-                    windSpeed: Math.max(0.1, +(sensor.windSpeed + windVariation).toFixed(1)),
-
-                    // Additional metadata
-                    hour: hour,
-                    isWeekend: isWeekend,
-                    dataQuality: 'generated'
+                    // Metadata
+                    dataQuality: row.data_quality || 'csv_external',
+                    dataSource: 'external_csv'
                 };
 
-                sensorTimeSeries.push(dataPoint);
+                validCount++;
+                return sensor;
+
+            } catch (error) {
+                if (index < 3) {
+                    console.warn(`⚠️ SAFE External: Error processing sensor row ${index}:`, error.message);
+                }
+                return null;
             }
+        }).filter(sensor => sensor !== null);
 
-            return {
-                ...sensor,
-                timeSeries: sensorTimeSeries,
-                timeRange: { start: startDate, end: endDate }
-            };
-        });
+        console.log(`✅ SAFE External: Processed ${validCount}/${rawData.length} valid sensors`);
 
-        // Cache the result
-        this.timeSeriesCache.set(cacheKey, timeSeriesData);
+        if (processedSensors.length > 0) {
+            console.log(`🔍 SAFE External: Sample sensor:`, processedSensors[0]);
+        }
 
-        console.log(`Generated time series for ${timeSeriesData.length} sensors with ${timeSeriesData[0]?.timeSeries?.length || 0} data points each`);
-        return timeSeriesData;
+        return processedSensors;
     }
 
     /**
-     * Get variation multiplier based on time of day and day of week
+     * Determine source from station name
      */
-    getVariationMultiplier(hour, isWeekend) {
-        // Rush hour patterns for weekdays
-        const weekdayMultipliers = {
-            0: 0.6, 1: 0.5, 2: 0.4, 3: 0.4, 4: 0.5, 5: 0.7,
-            6: 1.0, 7: 1.4, 8: 1.6, 9: 1.3, 10: 1.1, 11: 1.1,
-            12: 1.2, 13: 1.2, 14: 1.1, 15: 1.1, 16: 1.3, 17: 1.6,
-            18: 1.8, 19: 1.5, 20: 1.2, 21: 1.0, 22: 0.8, 23: 0.7
-        };
-
-        // Weekend patterns (generally lower and later peaks)
-        const weekendMultipliers = {
-            0: 0.5, 1: 0.4, 2: 0.3, 3: 0.3, 4: 0.3, 5: 0.4,
-            6: 0.6, 7: 0.7, 8: 0.8, 9: 0.9, 10: 1.0, 11: 1.1,
-            12: 1.2, 13: 1.2, 14: 1.1, 15: 1.1, 16: 1.0, 17: 1.1,
-            18: 1.2, 19: 1.1, 20: 1.0, 21: 0.9, 22: 0.7, 23: 0.6
-        };
-
-        return isWeekend ? weekendMultipliers[hour] : weekdayMultipliers[hour];
+    determineSourceFromName(name) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes('construction') || nameLower.includes('building')) return 'construction';
+        if (nameLower.includes('traffic') || nameLower.includes('vehicle') || nameLower.includes('road')) return 'vehicle';
+        if (nameLower.includes('dust') || nameLower.includes('open')) return 'dust';
+        if (nameLower.includes('industrial') || nameLower.includes('factory')) return 'industrial';
+        return 'mixed';
     }
 
     /**
-     * Get wind speed variation based on time and season
+     * Calculate severity from AQI
      */
-    getWindVariation(hour, seasonalFactor) {
-        // Wind typically picks up during day and calms at night
-        const windHourlyPattern = {
-            0: -1.2, 1: -1.5, 2: -1.8, 3: -2.0, 4: -1.8, 5: -1.2,
-            6: -0.8, 7: -0.2, 8: 0.5, 9: 1.2, 10: 1.8, 11: 2.2,
-            12: 2.5, 13: 2.8, 14: 3.0, 15: 2.8, 16: 2.2, 17: 1.5,
-            18: 0.8, 19: 0.2, 20: -0.2, 21: -0.5, 22: -0.8, 23: -1.0
-        };
-
-        const baseVariation = windHourlyPattern[hour] || 0;
-        const seasonalAdjustment = seasonalFactor > 1 ? 0.8 : -0.5; // July has more wind
-        const randomVariation = (Math.random() - 0.5) * 2;
-
-        return baseVariation + seasonalAdjustment + randomVariation;
-    }
-
-    /**
-     * Get humidity variation based on time and season
-     */
-    getHumidityVariation(hour, seasonalFactor) {
-        // Humidity typically higher at night, lower during day
-        const humidityHourlyPattern = {
-            0: 10, 1: 12, 2: 15, 3: 15, 4: 12, 5: 8,
-            6: 5, 7: 0, 8: -5, 9: -8, 10: -10, 11: -12,
-            12: -15, 13: -18, 14: -20, 15: -18, 16: -15, 17: -10,
-            18: -5, 19: 0, 20: 3, 21: 5, 22: 7, 23: 8
-        };
-
-        const baseVariation = humidityHourlyPattern[hour] || hour > 12 ? -10 : -5;
-        const seasonalAdjustment = seasonalFactor > 1 ? 15 : 0; // July humidity
-        const randomVariation = (Math.random() - 0.5) * 20;
-
-        return baseVariation + seasonalAdjustment + randomVariation;
-    }
-
-    /**
-     * Get temperature variation based on time and season
-     */
-    getTemperatureVariation(hour, seasonalFactor) {
-        // Temperature curve throughout the day
-        const hourMultipliers = {
-            0: -8, 1: -10, 2: -12, 3: -12, 4: -10, 5: -8,  // Night cooling
-            6: -5, 7: -2, 8: 2, 9: 5, 10: 8, 11: 10,        // Morning heating
-            12: 12, 13: 15, 14: 18, 15: 15, 16: 12, 17: 8,  // Afternoon peak
-            18: 5, 19: 2, 20: -1, 21: -3, 22: -5, 23: -6    // Evening cooling
-        };
-
-        const baseVariation = hourMultipliers[hour] || 0;
-        const seasonalAdjustment = seasonalFactor > 1 ? 5 : 0; // July heat
-        const randomVariation = (Math.random() - 0.5) * 6;
-
-        return baseVariation + seasonalAdjustment + randomVariation;
-    }
-
-    /**
-     * Helper methods
-     */
-    parseFloat(value, defaultValue = 0) {
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? defaultValue : parsed;
-    }
-
-    determineSource(sensor) {
-        const source = (sensor.source || sensor.type || '').toLowerCase();
-        const location = (sensor.station || sensor.name || '').toLowerCase();
-
-        if (source.includes('construction') || location.includes('construction')) return 'construction';
-        if (source.includes('vehicle') || source.includes('traffic') || location.includes('road')) return 'vehicle';
-        if (source.includes('dust') || location.includes('dust')) return 'dust';
-        if (source.includes('industrial') || location.includes('industrial')) return 'industrial';
-
-        // Default classification based on pollution levels
-        const aqi = this.parseFloat(sensor.aqi);
-        const pm10 = this.parseFloat(sensor.pm10);
-        const pm25 = this.parseFloat(sensor.pm25);
-        const co = this.parseFloat(sensor.co);
-
-        if (pm25 > 0 && pm10 / pm25 > 2) return 'dust';
-        if (co > 2) return 'vehicle';
-        if (aqi > 150) return 'industrial';
-
-        return 'residential';
-    }
-
     calculateSeverity(aqi) {
+        if (aqi <= 50) return 'good';
         if (aqi <= 100) return 'moderate';
-        if (aqi <= 150) return 'high';
-        if (aqi <= 300) return 'very_high';
+        if (aqi <= 150) return 'unhealthy_sensitive';
+        if (aqi <= 200) return 'unhealthy';
+        if (aqi <= 300) return 'very_unhealthy';
         return 'hazardous';
     }
 
     /**
-     * Get cached data
+     * Safe float parsing with fallback
      */
-    getCachedData(filename) {
-        return this.cache.get(filename);
+    parseFloatSafe(value, fallback = 0) {
+        if (value === null || value === undefined || value === '') {
+            return fallback;
+        }
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? fallback : parsed;
     }
 
     /**
@@ -334,7 +245,7 @@ export class ExternalDataLoader {
      */
     clearCache() {
         this.cache.clear();
-        this.timeSeriesCache.clear();
+        console.log('🧹 SAFE External: Cache cleared');
     }
 }
 

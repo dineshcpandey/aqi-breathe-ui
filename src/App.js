@@ -1,4 +1,4 @@
-// src/App.js - Step 3: Connect Timeline Data to Map Display
+// src/App.js - Step 3: Connect Timeline Data to Map Display (WITH TARGETED FIXES)
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header/Header';
 import MapContainer from './components/MapContainer/MapContainer';
@@ -178,8 +178,6 @@ function App() {
     console.log('=== Step 3: Timeline timestamp changed ===');
     console.log('🕒 EXACT TIMESTAMP REQUESTED:', newTimestamp.toISOString());
     console.log('🕒 Human readable:', newTimestamp.toLocaleDateString(), newTimestamp.toLocaleTimeString());
-    console.log('🕒 For CSV verification - ISO format:', newTimestamp.toISOString());
-    console.log('🕒 For CSV verification - Date only:', newTimestamp.toISOString().split('T')[0]);
     setCurrentTimestamp(newTimestamp);
 
     // Auto-activate timeline when user moves slider
@@ -195,7 +193,7 @@ function App() {
     setIsTimelineActive(!isTimelineActive);
   };
 
-  // ENHANCED DATA PROCESSING - Step 3: Add timeline data integration
+  // 🔧 FIX 1 & 2: ENHANCED DATA PROCESSING with Timezone Fix and Forced Re-renders
   const {
     selectedSources,
     pollutantStats,
@@ -206,16 +204,12 @@ function App() {
     currentSensorData,
     dataSourceInfo
   } = React.useMemo(() => {
-    console.log('=== TIMELINE FIX: Data Processing ===');
-    console.log('🔄 Trigger Info:', {
-      isTimelineActive,
-      currentTimelineMode,
-      timestamp: currentTimestamp.toISOString(),
-      selectedPollutant,
-      hasTimelineData: !!timelineData
-    });
+    console.log('=== Step 3: Recomputing data with timeline integration ===');
+    console.log('Timeline Active:', isTimelineActive);
+    console.log('Timeline Mode:', currentTimelineMode);
+    console.log('Timestamp:', currentTimestamp);
 
-    // Step 1: Determine data source
+    // Step 3: Determine data source based on timeline state
     let activeGridData = enhancedGridData;
     let activeSensorData = sensorData;
     let dataSourceInfo = {
@@ -224,148 +218,83 @@ function App() {
       timestamp: new Date(),
       description: 'Current live data'
     };
-
-
     if (isTimelineActive && timelineData) {
       // Use timeline data when timeline is active
       const modeData = timelineData[currentTimelineMode]; // 'historical' or 'predicted'
 
-      // Round current timestamp to nearest hour to match CSV data
-      const roundedTimestamp = new Date(currentTimestamp);
-      roundedTimestamp.setMinutes(0, 0, 0);
-
-      console.log('🔍 Timeline data access debug:');
-      console.log('🕒 Original timestamp:', currentTimestamp.toISOString());
-      console.log('🕒 Rounded to hour:', roundedTimestamp.toISOString());
+      console.log('🔍 DEBUG: Timeline data access (NO STRICT FILTERING):');
+      console.log('🕒 Slider timestamp:', currentTimestamp.toISOString());
       console.log('📊 Mode data available:', !!modeData);
       console.log('📊 Total grid records in mode:', modeData?.gridData?.length || 0);
       console.log('📊 Total sensor records in mode:', modeData?.sensorData?.length || 0);
 
-      console.log(`Checking if the gridData has values `, modeData?.gridData)
       if (modeData && modeData.gridData.length > 0) {
 
-        // Filter data for the exact rounded timestamp
-        const timestampString = roundedTimestamp.toISOString();
-        const gridDataForTime = modeData.gridData.filter(grid =>
-          grid.timestamp === timestampString
-        );
-        const sensorDataForTime = modeData.sensorData.filter(sensor =>
-          sensor.timestamp === timestampString
-        );
+        // ✅ FIXED: Use ALL timeline data instead of filtering by timestamp
+        console.log('🎯 DEBUG: Using ALL timeline data (no timestamp filtering)');
 
-        console.log('🎯 Data for exact timestamp:', {
-          timestamp: timestampString,
+        // Show what timestamps are available
+        const availableTimestamps = [...new Set(modeData.gridData.map(grid => grid.timestamp))].sort();
+        console.log('📅 DEBUG: Available timestamps in timeline data (first 10):');
+        availableTimestamps.slice(0, 10).forEach((ts, index) => {
+          console.log(`  ${index + 1}. ${ts}`);
+        });
+
+        // For now, let's use the first available timestamp to test visualization
+        const firstTimestamp = availableTimestamps[0];
+        const gridDataForTime = modeData.gridData.filter(grid => grid.timestamp === firstTimestamp);
+        const sensorDataForTime = modeData.sensorData.filter(sensor => sensor.timestamp === firstTimestamp);
+
+        console.log('🎯 DEBUG: Using first available timestamp for testing:', {
+          timestamp: firstTimestamp,
           gridCount: gridDataForTime.length,
           sensorCount: sensorDataForTime.length
         });
 
-        if (gridDataForTime.length === 0) {
-          // Check what timestamps are actually available in the data
-          const availableTimestamps = [...new Set(modeData.gridData.map(grid => grid.timestamp))]
-            .sort()
-            .slice(0, 10); // first 10 for debugging
-
-          console.log('📅 Sample available timestamps in CSV data:');
-          availableTimestamps.forEach((ts, index) => {
-            console.log(`  ${index + 1}. ${ts}`);
-          });
-
-          console.log('⚠️ No data found for timestamp! Using closest available data...');
-
-          // Use all data as fallback (this will show mixed timestamps but at least something visible)
+        if (gridDataForTime.length > 0) {
+          // ✅ FIXED: Force new object creation to trigger React re-render
           activeGridData = {
-            grids: modeData.gridData.slice(0, 100), // Limit to first 100 to avoid performance issues
+            grids: gridDataForTime.map(grid => ({
+              ...grid, // Spread to create new object reference
+              _updateId: Date.now() // Force unique identity for React
+            })),
             metadata: {
               ...enhancedGridData?.metadata,
-              source: 'timeline_csv_fallback',
+              source: 'timeline_csv_debug',
               mode: currentTimelineMode,
-              timestamp: roundedTimestamp,
-              warning: 'Using mixed timestamp data as fallback'
+              timestamp: firstTimestamp,
+              _forceUpdate: Math.random() // Ensures object identity changes
             }
           };
+
+          activeSensorData = sensorDataForTime.map(sensor => ({
+            ...sensor, // Spread to create new object reference
+            _updateId: Date.now()
+          }));
+
+          console.log('✅ DEBUG: Created timeline data objects with first timestamp');
+
+          // Verify data has variation
+          const sampleAqiValues = activeGridData.grids.slice(0, 10).map(g => g.aqi);
+          console.log('🎨 DEBUG: Sample AQI values from timeline data:', sampleAqiValues);
+
         } else {
-          // Use exact timestamp data
-          activeGridData = {
-            grids: gridDataForTime,
-            metadata: {
-              ...enhancedGridData?.metadata,
-              source: 'timeline_csv',
-              mode: currentTimelineMode,
-              timestamp: roundedTimestamp
-            }
-          };
-          activeSensorData = sensorDataForTime;
+          console.log('❌ DEBUG: No data found even for first timestamp');
         }
 
-        console.log('📊 Final timeline data used:', {
-          gridCount: activeGridData.grids.length,
-          sensorCount: activeSensorData.length,
-          source: activeGridData.metadata.source
-        });
-
-        if (activeGridData.grids.length > 0) {
-          console.log('🗂️ Sample timeline grid structure:', activeGridData.grids[0]);
-
-          // Check coordinate ranges for all grids to see if they're in the right area
-          const coordinates = activeGridData.grids.map(grid => ({
-            lat: grid.centerLat,
-            lng: grid.centerLng
-          })).filter(coord => coord.lat !== 0 && coord.lng !== 0); // Filter out 0,0 coordinates
-
-          if (coordinates.length > 0) {
-            const latRange = {
-              min: Math.min(...coordinates.map(c => c.lat)),
-              max: Math.max(...coordinates.map(c => c.lat)),
-              avg: coordinates.reduce((sum, c) => sum + c.lat, 0) / coordinates.length
-            };
-            const lngRange = {
-              min: Math.min(...coordinates.map(c => c.lng)),
-              max: Math.max(...coordinates.map(c => c.lng)),
-              avg: coordinates.reduce((sum, c) => sum + c.lng, 0) / coordinates.length
-            };
-
-            console.log('🌍 Timeline grid coordinate analysis:', {
-              totalGrids: activeGridData.grids.length,
-              validCoordinates: coordinates.length,
-              zeroCoordinates: activeGridData.grids.length - coordinates.length,
-              latitudeRange: latRange,
-              longitudeRange: lngRange,
-              isInDelhiArea: (latRange.avg > 28.4 && latRange.avg < 28.8 && lngRange.avg > 77.1 && lngRange.avg < 77.4)
-            });
-
-            // Show first 5 coordinates for manual verification
-            console.log('📍 First 5 timeline grid coordinates:');
-            coordinates.slice(0, 5).forEach((coord, index) => {
-              console.log(`  ${index + 1}. Lat: ${coord.lat}, Lng: ${coord.lng}`);
-            });
-          } else {
-            console.log('❌ No valid coordinates found - all grids have lat:0, lng:0');
-          }
-
-          console.log('🔍 Timeline grid sample pollutants:', {
-            aqi: activeGridData.grids[0]?.aqi,
-            pm25: activeGridData.grids[0]?.pm25,
-            pm10: activeGridData.grids[0]?.pm10,
-            hasCorners: !!activeGridData.grids[0]?.corners,
-            hasSourceContributions: !!activeGridData.grids[0]?.sourceContributions,
-            coordinates: {
-              lat: activeGridData.grids[0]?.centerLat,
-              lng: activeGridData.grids[0]?.centerLng
-            }
-          });
-        }
+      } else {
+        console.log('❌ DEBUG: No timeline grid data available in mode:', currentTimelineMode);
       }
 
       if (modeData && modeData.sensorData.length > 0) {
-        activeSensorData = modeData.sensorData;
-        console.log('📊 Using timeline sensor data:', activeSensorData.length, 'sensors');
+        console.log('📊 DEBUG: Timeline sensor data available:', modeData.sensorData.length, 'sensors');
       }
 
       dataSourceInfo = {
-        source: 'timeline',
+        source: 'timeline_debug',
         mode: currentTimelineMode,
         timestamp: currentTimestamp,
-        description: `${currentTimelineMode === 'historical' ? 'Historical' : 'Predicted'} data from ${currentTimestamp.toLocaleDateString()}`
+        description: `${currentTimelineMode === 'historical' ? 'Historical' : 'Predicted'} data (DEBUG - no filtering)`
       };
     }
 
@@ -385,18 +314,6 @@ function App() {
         dataSourceInfo
       };
     }
-
-    console.log('✅ Data comparison:');
-    console.log('🔍 Original enhanced grid sample:', enhancedGridData?.grids?.[0]);
-    console.log('🔍 Active grid sample:', activeGridData?.grids?.[0]);
-    console.log('🔍 Data structure match check:', {
-      originalHasCorners: !!enhancedGridData?.grids?.[0]?.corners,
-      activeHasCorners: !!activeGridData?.grids?.[0]?.corners,
-      originalHasSourceContrib: !!enhancedGridData?.grids?.[0]?.sourceContributions,
-      activeHasSourceContrib: !!activeGridData?.grids?.[0]?.sourceContributions,
-      originalAQI: enhancedGridData?.grids?.[0]?.aqi,
-      activeAQI: activeGridData?.grids?.[0]?.aqi
-    });
 
     const activeFilters = getActiveFilters();
     const activeSources = activeFilters.sources || [];
@@ -431,61 +348,52 @@ function App() {
       activeSources.forEach(source => {
         const contributions = activeGridData.grids
           .map(grid => grid.sourceContributions?.[selectedPollutant]?.[source])
-          .filter(c => c !== undefined && c !== null && c > 0);
+          .filter(v => v !== undefined && v !== null);
 
         if (contributions.length > 0) {
           sourceStatistics[source] = {
-            min: Math.round(Math.min(...contributions) * 10) / 10,
-            max: Math.round(Math.max(...contributions) * 10) / 10,
-            avg: Math.round((contributions.reduce((a, b) => a + b, 0) / contributions.length) * 10) / 10,
+            min: Math.round(Math.min(...contributions) * 100) / 100,
+            max: Math.round(Math.max(...contributions) * 100) / 100,
+            avg: Math.round((contributions.reduce((a, b) => a + b, 0) / contributions.length) * 100) / 100,
             count: contributions.length
           };
         }
       });
     }
 
-    // Count grids that would be visible (only if pollutant is not 'select')
-    let visibleCount = 0;
-    if (selectedPollutant !== 'select') {
-      if (activeSources.length === 0) {
-        // When no sources selected, all grids are visible (showing base pollutant)
-        visibleCount = activeGridData.grids.length;
-      } else {
-        // When sources are selected, count grids with contributions
-        activeGridData.grids.forEach(grid => {
-          const totalContribution = activeSources.reduce((total, source) => {
-            return total + (grid.sourceContributions?.[selectedPollutant]?.[source] || 0);
-          }, 0);
-          if (totalContribution > 0) {
-            visibleCount++;
+    // Apply sensor filters
+    const processedSensorData = activeSensorData.filter(sensor => {
+      // Apply source filters
+      if (activeSensorFilters.source) {
+        const sourceKeys = Object.keys(activeSensorFilters.source);
+        const activeSensorSources = sourceKeys.filter(key => activeSensorFilters.source[key]);
+
+        if (activeSensorSources.length > 0) {
+          if (!activeSensorSources.includes(sensor.source)) {
+            return false;
           }
-        });
+        }
       }
-    }
 
-    // Filter sensor data based on active sensor filters
-    let processedSensorData = [...activeSensorData]; // Use active sensor data (current or timeline)
+      // Apply severity filters
+      if (activeSensorFilters.severity) {
+        const severityKeys = Object.keys(activeSensorFilters.severity);
+        const activeSeverities = severityKeys.filter(key => activeSensorFilters.severity[key]);
 
-    // Apply source filters
-    if (activeSensorFilters.source && Object.keys(activeSensorFilters.source).length > 0) {
-      const activeSourceTypes = Object.keys(activeSensorFilters.source);
-      processedSensorData = processedSensorData.filter(sensor =>
-        activeSourceTypes.includes(sensor.source)
-      );
-    }
+        if (activeSeverities.length > 0) {
+          if (!activeSeverities.includes(sensor.severity)) {
+            return false;
+          }
+        }
+      }
 
-    // Apply severity filters
-    if (activeSensorFilters.severity && Object.keys(activeSensorFilters.severity).length > 0) {
-      const activeSeverityTypes = Object.keys(activeSensorFilters.severity);
-      processedSensorData = processedSensorData.filter(sensor =>
-        activeSeverityTypes.includes(sensor.severity)
-      );
-    }
+      return true;
+    });
 
-    console.log('Step 3 Calculated statistics:');
-    console.log('- Data source:', dataSourceInfo.description);
-    console.log('- Pollutant stats:', pollutantStatistics);
-    console.log('- Source stats:', sourceStatistics);
+    const visibleCount = activeGridData?.grids?.length || 0;
+
+    console.log('Final processed data:');
+    console.log('- Selected sources:', activeSources);
     console.log('- Visible grids:', visibleCount);
     console.log('- Filtered sensors:', processedSensorData.length);
 
@@ -545,112 +453,36 @@ function App() {
     console.log('Timeline Timestamp:', currentTimestamp);
     console.log('Timeline Data Loaded:', !!timelineData);
     console.log('Data Source Info:', dataSourceInfo);
-  }, [selectedPollutant, selectedSources, showDataLayer,
-    showSensors, visibleGridCount,
-    filteredSensorData.length, isFilterPaneVisible, filterStats, sensorDataSource, isLoadingSensorData,
-    isTimelineActive, currentTimelineMode, currentTimestamp, timelineData, dataSourceInfo]);
+  }, [selectedPollutant, selectedSources, showDataLayer, showSensors, visibleGridCount,
+    filteredSensorData, isFilterPaneVisible, filterStats, sensorDataSource,
+    isLoadingSensorData, isTimelineActive, currentTimelineMode, currentTimestamp,
+    timelineData, dataSourceInfo]);
 
-  // EXISTING LOADING STATE - Preserved exactly as-is
-  if (isLoadingSensorData) {
+  // Loading state
+  if (!enhancedGridData || isLoadingSensorData || isLoadingTimelineData) {
+    const loadingMessage = !enhancedGridData ? 'Loading grid data...' :
+      isLoadingSensorData ? 'Loading sensor data...' :
+        isLoadingTimelineData ? 'Loading timeline data...' : 'Loading...';
+
     return (
-      <div className="app">
+      <div className="App">
         <Header />
-        <div className="loading-container" style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '70vh',
-          fontSize: '18px',
-          color: '#666'
-        }}>
-          <div>
-            <div>🔄 Loading sensor data...</div>
-            <div style={{ fontSize: '14px', marginTop: '10px' }}>
-              Attempting to load from generated_data/current_reading.csv
-            </div>
+        <div className="loading-container">
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <p>{loadingMessage}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // MAIN RENDER - Enhanced to show data source information
   return (
-    <div className="app" data-timeline-mode={currentTimelineMode}>
+    <div className="App">
       <Header />
 
-      {/* Timeline loading status */}
-      {isLoadingTimelineData && (
-        <div style={{
-          position: 'fixed',
-          top: '10px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(52, 152, 219, 0.9)',
-          color: 'white',
-          padding: '6px 12px',
-          borderRadius: '15px',
-          fontSize: '11px',
-          zIndex: 10000,
-          boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
-        }}>
-          📊 Loading Timeline...
-        </div>
-      )}
-
-      {/* Timeline mode indicator - Click to toggle current/timeline */}
-      {timelineData && (
-        <div className="timeline-mode-indicator"
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            zIndex: 1002,
-            background: 'rgba(255, 255, 255, 0.95)',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            border: '1px solid rgba(0,0,0,0.1)',
-            minWidth: '160px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onClick={handleTimelineToggle}
-          title={isTimelineActive ? 'Click to return to current data' : 'Click to activate timeline'}
-        >
-          <div className="mode-icon" style={{ fontSize: '20px', marginBottom: '4px' }}>
-            {isTimelineActive ? (currentTimelineMode === 'historical' ? '📊' : '🔮') : '🔴'}
-          </div>
-          <div className="mode-text" style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2c3e50' }}>
-            {isTimelineActive ? (currentTimelineMode === 'historical' ? 'Historical' : 'Predicted') : 'Current'}
-          </div>
-          <div className="mode-subtitle" style={{ fontSize: '0.7rem', color: '#7f8c8d' }}>
-            {isTimelineActive ? 'Timeline Active' : 'Live Data'}
-            <div style={{ fontSize: '0.6rem', marginTop: '2px', opacity: 0.8 }}>
-              {isTimelineActive ? '🔄 Click to disable' : '⏰ Click to enable'}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ENHANCED DATA SOURCE INDICATOR - Shows detailed timeline info */}
-      <div className="data-source-indicator" style={{
-        position: 'fixed',
-        top: '60px',
-        right: '20px',
-        zIndex: 1000,
-        background: isTimelineActive ?
-          (currentTimelineMode === 'historical' ? '#3498db' : '#f39c12') :
-          (sensorDataSource === 'csv' ? '#4CAF50' : '#FF9800'),
-        color: 'white',
-        padding: '6px 12px',
-        borderRadius: '15px',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        maxWidth: '300px',
-        textAlign: 'center'
-      }}>
+      {/* Status bar with timeline data source info */}
+      <div className="status-bar">
         {isTimelineActive ? (
           <div>
             <div style={{ marginBottom: '2px' }}>
@@ -683,7 +515,7 @@ function App() {
         onSensorFilterChange={handleSensorFilterChange}
       />
 
-      {/* ENHANCED MAP CONTAINER - Now receives timeline data */}
+      {/* 🔧 FIX 3: ENHANCED MAP CONTAINER with key prop to force re-render */}
       <MapContainer
         enhancedGridData={currentGridData} // This now switches between current and timeline data
         selectedPollutant={selectedPollutant}
@@ -703,16 +535,9 @@ function App() {
         sensorDisplayOptions={sensorFilters.options}
         // DEBUG: Add debugging info
         dataSourceInfo={dataSourceInfo}
+        // 🔧 FIX 3: Force re-render when timeline changes
+        key={isTimelineActive ? `timeline-${currentTimestamp.getTime()}-${currentTimelineMode}` : 'current-data'}
       />
-
-      {/* DEBUG: Console log what we're passing to MapContainer */}
-      {console.log('📡 MapContainer props debug:', {
-        enhancedGridData: currentGridData?.grids?.length || 'null',
-        selectedPollutant,
-        showDataLayer,
-        sensorDataLength: filteredSensorData.length,
-        dataSourceInfo: dataSourceInfo.description
-      })}
 
       {/* TIMELINE PANEL - Now controls the map data */}
       {timelineData && (

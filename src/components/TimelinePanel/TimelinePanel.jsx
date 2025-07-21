@@ -1,53 +1,68 @@
-// src/components/TimelinePanel/TimelinePanel.jsx
-import React, { useState, useEffect, useRef } from 'react';
+// src/components/TimelinePanel/TimelinePanel.jsx - FIXED VERSION with proper CSS import
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './TimelinePanel.css';
 
 const TimelinePanel = ({
     onModeChange,
     onTimeChange,
     currentMode = 'historical',
-    currentTime = new Date('2025-07-20T14:30:00Z'),
-    isPlaying = false,
-    onPlayToggle,
-    playSpeed = 1,
-    onSpeedChange,
-    dataStatus = null
+    currentTimestamp = new Date('2025-07-20T14:30:00Z'),
+    timelineData,
+    onToggle,
+    isActive = false
 }) => {
     const [isDragging, setIsDragging] = useState(false);
-    const [localTime, setLocalTime] = useState(currentTime);
+    const [localTime, setLocalTime] = useState(currentTimestamp);
     const sliderRef = useRef(null);
-    const intervalRef = useRef(null);
 
-    // Timeline configuration
-    const timelineConfig = {
-        start: new Date('2025-07-15T00:00:00Z'),
-        now: new Date('2025-07-20T14:30:00Z'),
-        end: new Date('2025-07-25T23:59:59Z'),
-        totalDuration: 10 * 24 * 60 * 60 * 1000 // 10 days in milliseconds
-    };
+    // Timeline configuration - get from props or use defaults
+    const timelineConfig = useMemo(() => {
+        if (timelineData?.timeline) {
+            return timelineData.timeline;
+        }
+        return {
+            start: new Date('2025-07-15T00:00:00Z'),
+            current: new Date('2025-07-20T14:30:00Z'),
+            end: new Date('2025-07-25T23:59:59Z'),
+            totalDuration: 10 * 24 * 60 * 60 * 1000
+        };
+    }, [timelineData]);
 
-    // Calculate position percentage for timeline
-    const getTimePosition = (time) => {
+    // Calculate position percentage for timeline - useCallback to prevent recreation
+    const getTimePosition = useCallback((time) => {
         const totalMs = timelineConfig.end.getTime() - timelineConfig.start.getTime();
         const currentMs = time.getTime() - timelineConfig.start.getTime();
         return Math.max(0, Math.min(100, (currentMs / totalMs) * 100));
-    };
+    }, [timelineConfig.start, timelineConfig.end]);
 
-    // Get time from position percentage
-    const getTimeFromPosition = (percentage) => {
+    // Get time from position percentage - useCallback to prevent recreation
+    const getTimeFromPosition = useCallback((percentage) => {
         const totalMs = timelineConfig.end.getTime() - timelineConfig.start.getTime();
         const targetMs = timelineConfig.start.getTime() + (totalMs * percentage / 100);
-        return new Date(targetMs);
-    };
+        const rawTime = new Date(targetMs);
 
-    // Determine if time is in historical, current, or predicted zone
-    const getTimeZone = (time) => {
-        if (time <= timelineConfig.now) return 'historical';
+        // Round to nearest hour to match CSV data structure
+        const roundedTime = new Date(rawTime);
+        roundedTime.setMinutes(0, 0, 0); // Set minutes, seconds, milliseconds to 0
+        console.log(">>>>>>>> ", roundedTime)
+        console.log('🕒 Timeline position conversion:', {
+            percentage: percentage.toFixed(1) + '%',
+            rawTime: rawTime.toISOString(),
+            roundedToHour: roundedTime.toISOString()
+        });
+
+        return roundedTime;
+    }, [timelineConfig.start, timelineConfig.end]);
+
+    // Determine if time is in historical, current, or predicted zone - useCallback to prevent recreation
+    const getTimeZone = useCallback((time) => {
+        const currentTime = timelineConfig.current || timelineConfig.now;
+        if (time <= currentTime) return 'historical';
         return 'predicted';
-    };
+    }, [timelineConfig.current, timelineConfig.now]);
 
-    // Handle slider interaction
-    const handleSliderClick = (event) => {
+    // Handle slider interaction - useCallback to prevent recreation
+    const handleSliderClick = useCallback((event) => {
         if (!sliderRef.current) return;
 
         const rect = sliderRef.current.getBoundingClientRect();
@@ -62,55 +77,24 @@ const TimelinePanel = ({
         if (zone !== currentMode) {
             onModeChange?.(zone);
         }
-    };
+    }, [getTimeFromPosition, getTimeZone, currentMode, onTimeChange, onModeChange]);
 
-    // Handle drag functionality
-    const handleMouseDown = (event) => {
+    // Handle drag functionality - useCallback to prevent recreation
+    const handleMouseDown = useCallback((event) => {
         setIsDragging(true);
         handleSliderClick(event);
-    };
+    }, [handleSliderClick]);
 
-    const handleMouseMove = (event) => {
+    const handleMouseMove = useCallback((event) => {
         if (!isDragging || !sliderRef.current) return;
         handleSliderClick(event);
-    };
+    }, [isDragging, handleSliderClick]);
 
-    const handleMouseUp = () => {
+    const handleMouseUp = useCallback(() => {
         setIsDragging(false);
-    };
+    }, []);
 
-    // Auto-play functionality
-    useEffect(() => {
-        if (isPlaying) {
-            intervalRef.current = setInterval(() => {
-                setLocalTime(prevTime => {
-                    const nextTime = new Date(prevTime.getTime() + (15 * 60 * 1000 * playSpeed)); // 15 min intervals
-
-                    // Stop at the end
-                    if (nextTime > timelineConfig.end) {
-                        onPlayToggle?.(false);
-                        return timelineConfig.end;
-                    }
-
-                    onTimeChange?.(nextTime);
-
-                    // Auto-switch mode based on time zone
-                    const zone = getTimeZone(nextTime);
-                    if (zone !== currentMode) {
-                        onModeChange?.(zone);
-                    }
-
-                    return nextTime;
-                });
-            }, 1000 / playSpeed); // Faster updates for higher speeds
-        } else {
-            clearInterval(intervalRef.current);
-        }
-
-        return () => clearInterval(intervalRef.current);
-    }, [isPlaying, playSpeed, currentMode, onTimeChange, onModeChange, onPlayToggle]);
-
-    // Mouse event listeners
+    // Mouse event listeners - fixed dependencies
     useEffect(() => {
         if (isDragging) {
             document.addEventListener('mousemove', handleMouseMove);
@@ -120,35 +104,45 @@ const TimelinePanel = ({
                 document.removeEventListener('mouseup', handleMouseUp);
             };
         }
-    }, [isDragging]);
+    }, [isDragging, handleMouseMove, handleMouseUp]);
 
-    // Sync local time with prop changes
+    // Sync local time with prop changes - stable dependency
     useEffect(() => {
-        setLocalTime(currentTime);
-    }, [currentTime]);
+        setLocalTime(currentTimestamp);
+    }, [currentTimestamp]);
 
-    // Format time for display
-    const formatTime = (time) => {
+    // Format time for display - useCallback to prevent recreation
+    const formatTime = useCallback((time) => {
         return time.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });
-    };
+    }, []);
 
-    // Quick jump buttons
-    const quickJumps = [
+    // Quick jump buttons - useMemo to prevent recreation
+    const quickJumps = useMemo(() => [
         { label: 'Start', time: timelineConfig.start },
         { label: 'Rush Hour', time: new Date('2025-07-18T08:30:00Z') },
-        { label: 'Now', time: timelineConfig.now },
+        { label: 'Now', time: timelineConfig.current || timelineConfig.now },
         { label: 'Tomorrow', time: new Date('2025-07-21T09:00:00Z') },
         { label: 'End', time: timelineConfig.end }
-    ];
+    ], [timelineConfig.start, timelineConfig.current, timelineConfig.now, timelineConfig.end]);
 
+    // Calculate positions - use the memoized functions
     const currentPosition = getTimePosition(localTime);
-    const nowPosition = getTimePosition(timelineConfig.now);
+    const nowPosition = getTimePosition(timelineConfig.current || timelineConfig.now);
     const currentZone = getTimeZone(localTime);
+
+    // Debug logging
+    console.log('🕒 Timeline render debug:', {
+        currentPosition,
+        nowPosition,
+        currentZone,
+        localTime,
+        timelineConfig
+    });
 
     return (
         <div className="timeline-panel" data-mode={currentMode}>
@@ -249,30 +243,6 @@ const TimelinePanel = ({
 
             {/* Controls */}
             <div className="timeline-controls">
-                <div className="playback-controls">
-                    <button
-                        className={`control-btn play-btn ${isPlaying ? 'playing' : ''}`}
-                        onClick={() => onPlayToggle?.(!isPlaying)}
-                    >
-                        {isPlaying ? '⏸️' : '▶️'}
-                        <span>{isPlaying ? 'Pause' : 'Play'}</span>
-                    </button>
-
-                    <div className="speed-control">
-                        <label>Speed:</label>
-                        <select
-                            value={playSpeed}
-                            onChange={(e) => onSpeedChange?.(Number(e.target.value))}
-                        >
-                            <option value={0.5}>0.5x</option>
-                            <option value={1}>1x</option>
-                            <option value={2}>2x</option>
-                            <option value={5}>5x</option>
-                            <option value={10}>10x</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div className="quick-jumps">
                     {quickJumps.map((jump, index) => (
                         <button

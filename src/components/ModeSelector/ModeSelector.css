@@ -1,0 +1,290 @@
+/* src/components/ModeSelector/ModeSelector.css */
+.mode-selector {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 1000;
+    min-width: 280px;
+    max-width: 320px;
+    transition: all 0.3s ease;
+}
+
+.mode-selector-header {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.mode-selector-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50;
+    letter-spacing: 0.5px;
+}
+
+.mode-selector-header p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.mode-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(52, 152, 219, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn.active {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border-color: #2980b9;
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.3);
+}
+
+.mode-btn.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.mode-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.mode-icon {
+    font-size: 24px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.mode-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mode-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.mode-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-weight: 500;
+}
+
+.mode-btn.active .mode-subtitle {
+    opacity: 0.9;
+}
+
+.mode-loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(52, 152, 219, 0.3);
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: auto;
+}
+
+.mode-info {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #7f8c8d;
+}
+
+.info-icon {
+    font-size: 14px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.info-text {
+    font-weight: 500;
+}
+
+/* Animations */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Mode-specific styling */
+.App[data-visualization-mode="current"] .mode-selector {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.App[data-visualization-mode="historical"] .mode-selector {
+    background: rgba(227, 242, 253, 0.95);
+    border-color: rgba(52, 152, 219, 0.2);
+}
+
+.App[data-visualization-mode="predicted"] .mode-selector {
+    background: rgba(255, 243, 224, 0.95);
+    border-color: rgba(241, 196, 15, 0.2);
+}
+
+/* Historical mode active button */
+.App[data-visualization-mode="historical"] .mode-btn.active {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+/* Predicted mode active button */
+.App[data-visualization-mode="predicted"] .mode-btn.active {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+/* Timeline toggle button */
+.timeline-toggle {
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(52, 152, 219, 0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #3498db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.timeline-toggle:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: #3498db;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+}
+
+/* Loading overlay */
+.timeline-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.timeline-loading-overlay .loading-content {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-loading-overlay .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(52, 152, 219, 0.3);
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px auto;
+}
+
+.timeline-loading-overlay p {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .mode-selector {
+        top: 70px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        min-width: auto;
+    }
+
+    .timeline-toggle {
+        top: 70px;
+        left: 10px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    .mode-buttons {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 6px;
+    }
+
+    .mode-btn {
+        min-width: 100px;
+        flex-shrink: 0;
+        padding: 10px 12px;
+    }
+
+    .mode-icon {
+        font-size: 20px;
+        min-width: 24px;
+    }
+
+    .mode-label {
+        font-size: 0.85rem;
+    }
+
+    .mode-subtitle {
+        font-size: 0.7rem;
+    }
+}

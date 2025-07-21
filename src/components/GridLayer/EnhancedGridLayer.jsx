@@ -1,3 +1,4 @@
+// src/components/GridLayer/EnhancedGridLayer.jsx - DEBUG VERSION for timeline data
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { getPollutantColor, calculateCombinedSourceIntensity, POLLUTION_SOURCES } from '../../utils/enhancedGridGenerator';
@@ -20,6 +21,24 @@ const EnhancedGridLayer = ({
         console.log('Selected Sources:', selectedSources);
         console.log('Grid Data Count:', gridData?.grids?.length || 0);
         console.log('Is Visible:', isVisible);
+
+        // DEBUG: Check grid data structure
+        if (gridData?.grids?.length > 0) {
+            const sampleGrid = gridData.grids[0];
+            console.log('🔍 GRID STRUCTURE DEBUG:');
+            console.log('Sample grid keys:', Object.keys(sampleGrid));
+            console.log('Has corners:', !!sampleGrid.corners);
+            console.log('Has centerLat/Lng:', !!sampleGrid.centerLat && !!sampleGrid.centerLng);
+            console.log('Coordinates:', { lat: sampleGrid.centerLat, lng: sampleGrid.centerLng });
+            console.log('Pollutant value:', sampleGrid[selectedPollutant]);
+            console.log('Has sourceContributions:', !!sampleGrid.sourceContributions);
+
+            if (sampleGrid.corners) {
+                console.log('Corners format:', sampleGrid.corners);
+            } else {
+                console.log('❌ NO CORNERS - this will prevent polygon creation!');
+            }
+        }
 
         // Create layer group if it doesn't exist
         if (!gridLayerRef.current) {
@@ -45,11 +64,52 @@ const EnhancedGridLayer = ({
 
         // Add grid polygons with pollutant colors and source intensity
         let visibleGridCount = 0;
+        let skippedNoCorners = 0;
+        let skippedNoPollutant = 0;
+        let skippedZeroContrib = 0;
 
-        gridData.grids.forEach(grid => {
+        gridData.grids.forEach((grid, index) => {
+            // DEBUG: Check individual grid issues
+            if (index < 3) { // Debug first 3 grids
+                console.log(`🔍 Grid ${index} debug:`, {
+                    id: grid.id,
+                    hasCorners: !!grid.corners,
+                    coordinates: { lat: grid.centerLat, lng: grid.centerLng },
+                    pollutantValue: grid[selectedPollutant],
+                    hasSourceContrib: !!grid.sourceContributions
+                });
+            }
+
             // Get pollutant value for color
             const pollutantValue = grid[selectedPollutant];
-            if (pollutantValue === undefined) return;
+            if (pollutantValue === undefined) {
+                skippedNoPollutant++;
+                return;
+            }
+
+            // Check if grid has corners for polygon creation
+            if (!grid.corners || !Array.isArray(grid.corners) || grid.corners.length === 0) {
+                skippedNoCorners++;
+                if (index < 3) {
+                    console.log(`❌ Grid ${index} skipped - no corners:`, grid.corners);
+                }
+                return;
+            }
+
+            // Validate corner coordinates
+            const validCorners = grid.corners.every(corner =>
+                Array.isArray(corner) && corner.length === 2 &&
+                typeof corner[0] === 'number' && typeof corner[1] === 'number' &&
+                corner[0] !== 0 && corner[1] !== 0 // Avoid 0,0 coordinates
+            );
+
+            if (!validCorners) {
+                if (index < 3) {
+                    console.log(`❌ Grid ${index} has invalid corners:`, grid.corners);
+                }
+                skippedNoCorners++;
+                return;
+            }
 
             // Get color based on pollutant value
             const colorInfo = getPollutantColor(selectedPollutant, pollutantValue);
@@ -64,49 +124,74 @@ const EnhancedGridLayer = ({
                 sourceIntensity = calculateCombinedSourceIntensity(grid, selectedSources, selectedPollutant);
 
                 // Skip grids with zero contribution from selected sources
-                if (sourceIntensity <= 0) return;
+                if (sourceIntensity <= 0) {
+                    skippedZeroContrib++;
+                    return;
+                }
             }
 
-            // Create polygon with pollutant color and source intensity
-            const polygon = L.polygon(grid.corners, {
-                fillColor: colorInfo.color,
-                fillOpacity: sourceIntensity, // Source intensity determines opacity
-                color: colorInfo.color,
-                weight: 0.5,
-                opacity: 0.8
-            });
-
-            // Create comprehensive popup content
-            const popupContent = createPopupContent(grid, selectedPollutant, selectedSources, pollutantValue, colorInfo, sourceIntensity);
-            polygon.bindPopup(popupContent);
-
-            // Add hover effects
-            polygon.on('mouseover', function (e) {
-                this.setStyle({
-                    weight: 2,
-                    opacity: 1.0,
-                    fillOpacity: Math.min(sourceIntensity + 0.2, 1.0)
-                });
-            });
-
-            polygon.on('mouseout', function (e) {
-                this.setStyle({
+            try {
+                // Create polygon with pollutant color and source intensity
+                const polygon = L.polygon(grid.corners, {
+                    fillColor: colorInfo.color,
+                    fillOpacity: sourceIntensity, // Source intensity determines opacity
+                    color: colorInfo.color,
                     weight: 0.5,
-                    opacity: 0.8,
-                    fillOpacity: sourceIntensity
+                    opacity: 0.8
                 });
-            });
 
-            gridLayerRef.current.addLayer(polygon);
-            gridPolygonsRef.current[grid.id] = polygon;
-            visibleGridCount++;
+                // Create comprehensive popup content
+                const popupContent = createPopupContent(grid, selectedPollutant, selectedSources, pollutantValue, colorInfo, sourceIntensity);
+                polygon.bindPopup(popupContent);
+
+                // Add hover effects
+                polygon.on('mouseover', function (e) {
+                    this.setStyle({
+                        weight: 2,
+                        opacity: 1.0,
+                        fillOpacity: Math.min(sourceIntensity + 0.2, 1.0)
+                    });
+                });
+
+                polygon.on('mouseout', function (e) {
+                    this.setStyle({
+                        weight: 0.5,
+                        opacity: 0.8,
+                        fillOpacity: sourceIntensity
+                    });
+                });
+
+                gridLayerRef.current.addLayer(polygon);
+                gridPolygonsRef.current[grid.id] = polygon;
+                visibleGridCount++;
+
+                // DEBUG: Log successful polygon creation for first few
+                if (index < 3) {
+                    console.log(`✅ Successfully created polygon for grid ${index}:`, {
+                        corners: grid.corners,
+                        color: colorInfo.color,
+                        opacity: sourceIntensity
+                    });
+                }
+            } catch (error) {
+                console.error(`❌ Error creating polygon for grid ${index}:`, error);
+                console.error('Grid data:', grid);
+            }
         });
 
-        console.log(`Created ${visibleGridCount} visible grid polygons`);
+        console.log(`📊 GRID PROCESSING SUMMARY:`);
+        console.log(`- Total grids processed: ${gridData.grids.length}`);
+        console.log(`- Visible polygons created: ${visibleGridCount}`);
+        console.log(`- Skipped (no corners): ${skippedNoCorners}`);
+        console.log(`- Skipped (no pollutant): ${skippedNoPollutant}`);
+        console.log(`- Skipped (zero contribution): ${skippedZeroContrib}`);
 
         // Add to map if not already added
         if (!map.hasLayer(gridLayerRef.current)) {
             map.addLayer(gridLayerRef.current);
+            console.log('✅ Grid layer added to map');
+        } else {
+            console.log('ℹ️ Grid layer already on map');
         }
 
     }, [map, gridData, selectedPollutant, selectedSources, isVisible]);

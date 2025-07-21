@@ -1,4 +1,4 @@
-// src/utils/timelineDataLoader.js
+// src/utils/timelineDataLoader.js - TIMEZONE FIXED VERSION
 import Papa from 'papaparse';
 
 class TimelineDataLoader {
@@ -22,45 +22,80 @@ class TimelineDataLoader {
         }
 
         this.isLoading = true;
-        console.log('Loading timeline data from CSV files...');
+        console.log('🔄 Loading timeline data from CSV files...');
 
         try {
             // Try to load all CSV files, but handle missing files gracefully
             const loadPromises = [
                 this.loadCSVFile('grid_historical.csv').catch(e => {
-                    console.warn('grid_historical.csv not found, using empty data');
+                    console.warn('❌ grid_historical.csv not found, using empty data');
                     return [];
                 }),
                 this.loadCSVFile('grid_predicted.csv').catch(e => {
-                    console.warn('grid_predicted.csv not found, using empty data');
+                    console.warn('❌ grid_predicted.csv not found, using empty data');
                     return [];
                 }),
                 this.loadCSVFile('historical_reading.csv').catch(e => {
-                    console.warn('historical_reading.csv not found, using empty data');
+                    console.warn('❌ historical_reading.csv not found, using empty data');
                     return [];
                 }),
                 this.loadCSVFile('predicted_reading.csv').catch(e => {
-                    console.warn('predicted_reading.csv not found, using empty data');
+                    console.warn('❌ predicted_reading.csv not found, using empty data');
                     return [];
                 })
             ];
 
             const [gridHistorical, gridPredicted, sensorHistorical, sensorPredicted] = await Promise.all(loadPromises);
 
+            console.log('📊 Raw CSV Data Loaded:');
+            console.log('  Grid Historical:', gridHistorical.length, 'rows');
+            console.log('  Grid Predicted:', gridPredicted.length, 'rows');
+            console.log('  Sensor Historical:', sensorHistorical.length, 'rows');
+            console.log('  Sensor Predicted:', sensorPredicted.length, 'rows');
+
+            // 🔧 TIMEZONE FIX: Analyze timestamps during processing
+            if (gridHistorical.length > 0) {
+                console.log('🕒 TIMEZONE Analysis - Historical Grid Sample:', {
+                    raw_timestamp: gridHistorical[0].timestamp,
+                    timestamp_type: typeof gridHistorical[0].timestamp,
+                    is_string: typeof gridHistorical[0].timestamp === 'string',
+                    parsed_as_date: new Date(gridHistorical[0].timestamp).toISOString(),
+                    timezone_suffix: gridHistorical[0].timestamp?.includes('Z') ? 'UTC (Z)' : 'No timezone specified'
+                });
+            }
+
+            // Process the data
+            const processedGridHistorical = this.processGridData(gridHistorical, 'historical');
+            const processedGridPredicted = this.processGridData(gridPredicted, 'predicted');
+            const processedSensorHistorical = this.processSensorData(sensorHistorical, 'historical');
+            const processedSensorPredicted = this.processSensorData(sensorPredicted, 'predicted');
+
+            console.log('🔄 Processed Data:');
+            console.log('  Grid Historical:', processedGridHistorical.length, 'processed');
+            console.log('  Grid Predicted:', processedGridPredicted.length, 'processed');
+            console.log('  Sensor Historical:', processedSensorHistorical.length, 'processed');
+            console.log('  Sensor Predicted:', processedSensorPredicted.length, 'processed');
+
+            // 🔧 TIMEZONE FIX: Log unique timestamps from processed data
+            if (processedGridHistorical.length > 0) {
+                const uniqueTimestamps = [...new Set(processedGridHistorical.map(g => g.timestamp))].sort().slice(0, 5);
+                console.log('🕒 TIMEZONE Analysis - Unique processed timestamps (first 5):', uniqueTimestamps);
+            }
+
             const timelineData = {
                 historical: {
-                    gridData: this.processGridData(gridHistorical),
-                    sensorData: this.processSensorData(sensorHistorical),
+                    gridData: processedGridHistorical,
+                    sensorData: processedSensorHistorical,
                     dataType: 'historical',
-                    totalGridCells: gridHistorical.length,
-                    totalSensors: sensorHistorical.length
+                    totalGridCells: processedGridHistorical.length,
+                    totalSensors: processedSensorHistorical.length
                 },
                 predicted: {
-                    gridData: this.processGridData(gridPredicted),
-                    sensorData: this.processSensorData(sensorPredicted),
+                    gridData: processedGridPredicted,
+                    sensorData: processedSensorPredicted,
                     dataType: 'predicted',
-                    totalGridCells: gridPredicted.length,
-                    totalSensors: sensorPredicted.length
+                    totalGridCells: processedGridPredicted.length,
+                    totalSensors: processedSensorPredicted.length
                 },
                 timeline: {
                     start: new Date('2025-07-15T00:00:00Z'),
@@ -77,6 +112,11 @@ class TimelineDataLoader {
                         gridPredicted: gridPredicted.length > 0,
                         sensorHistorical: sensorHistorical.length > 0,
                         sensorPredicted: sensorPredicted.length > 0
+                    },
+                    timezoneInfo: {
+                        csvTimezone: 'UTC (Z suffix)',
+                        processingTimezone: 'UTC preserved',
+                        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                     }
                 }
             };
@@ -84,18 +124,19 @@ class TimelineDataLoader {
             // Cache the processed data
             this.cache.set('timeline', timelineData);
 
-            console.log('Timeline data loaded successfully:', {
+            console.log('✅ Timeline data loaded successfully:', {
                 historicalGrids: timelineData.historical.totalGridCells,
                 predictedGrids: timelineData.predicted.totalGridCells,
                 historicalSensors: timelineData.historical.totalSensors,
                 predictedSensors: timelineData.predicted.totalSensors,
-                filesFound: timelineData.metadata.filesFound
+                filesFound: timelineData.metadata.filesFound,
+                timezoneInfo: timelineData.metadata.timezoneInfo
             });
 
             return timelineData;
 
         } catch (error) {
-            console.error('Error loading timeline data:', error);
+            console.error('❌ Error loading timeline data:', error);
             // Return fallback/demo data
             return this.getFallbackData();
         } finally {
@@ -108,7 +149,7 @@ class TimelineDataLoader {
      */
     async loadCSVFile(filename) {
         try {
-            console.log(`Loading CSV file: ${filename}`);
+            console.log(`📂 Loading CSV file: ${filename}`);
 
             // Check if window.fs is available (Claude environment)
             if (typeof window !== 'undefined' && window.fs && window.fs.readFile) {
@@ -127,11 +168,11 @@ class TimelineDataLoader {
             return this.parseCSVString(csvText, filename);
 
         } catch (error) {
-            console.error(`Error reading file ${filename}:`, error);
+            console.error(`❌ Error reading file ${filename}:`, error);
 
             // If file not found, return empty array instead of throwing
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.warn(`CSV file ${filename} not found, using empty data`);
+                console.warn(`📁 CSV file ${filename} not found, using empty data`);
                 return [];
             }
 
@@ -140,24 +181,46 @@ class TimelineDataLoader {
     }
 
     /**
-     * Parse CSV string using Papa Parse
+     * Parse CSV string using Papa Parse with timezone preservation
      */
     parseCSVString(csvText, filename) {
         return new Promise((resolve, reject) => {
+            console.log(`📊 Parsing ${filename}, size: ${csvText.length} characters`);
+
             Papa.parse(csvText, {
                 header: true,
-                dynamicTyping: true,
+                // 🔧 TIMEZONE FIX: Use dynamicTyping: false to keep timestamps as strings
+                // This prevents Papa Parse from converting timestamps to Date objects in local timezone
+                dynamicTyping: false, // Keep timestamps as strings to preserve UTC
                 skipEmptyLines: true,
                 delimitersToGuess: [',', '\t', '|', ';'],
                 complete: (results) => {
                     if (results.errors.length > 0) {
-                        console.warn(`Parsing warnings for ${filename}:`, results.errors);
+                        console.warn(`⚠️ Parsing warnings for ${filename}:`, results.errors);
                     }
-                    console.log(`Successfully parsed ${filename}: ${results.data.length} rows`);
+
+                    console.log(`✅ Successfully parsed ${filename}: ${results.data.length} rows`);
+                    console.log(`📋 Columns found:`, Object.keys(results.data[0] || {}));
+
+                    // Log first row for debugging
+                    if (results.data.length > 0) {
+                        console.log(`🔍 Sample row from ${filename}:`, results.data[0]);
+
+                        // 🔧 TIMEZONE FIX: Verify timestamp format in CSV
+                        if (results.data[0].timestamp) {
+                            console.log(`🕒 TIMEZONE Check for ${filename}:`, {
+                                timestamp_raw: results.data[0].timestamp,
+                                is_string: typeof results.data[0].timestamp === 'string',
+                                contains_Z: results.data[0].timestamp.includes('Z'),
+                                would_parse_to: new Date(results.data[0].timestamp).toISOString()
+                            });
+                        }
+                    }
+
                     resolve(results.data);
                 },
                 error: (error) => {
-                    console.error(`Error parsing ${filename}:`, error);
+                    console.error(`❌ Error parsing ${filename}:`, error);
                     reject(error);
                 }
             });
@@ -166,47 +229,122 @@ class TimelineDataLoader {
 
     /**
      * Process grid data and ensure proper format for user's CSV structure
+     * TIMEZONE FIXED VERSION - preserves UTC timestamps
      */
-    processGridData(rawGridData) {
-        return rawGridData.map((row, index) => {
-            // Process user's specific CSV structure
+    processGridData(rawGridData, dataType = 'historical') {
+        if (!rawGridData || rawGridData.length === 0) {
+            console.warn(`⚠️ No raw grid data provided for ${dataType}`);
+            return [];
+        }
+
+        console.log(`🔄 Processing ${rawGridData.length} grid rows for ${dataType}...`);
+
+        const processedData = rawGridData.map((row, index) => {
+            // Clean and validate the row data
+            const cleanRow = this.cleanHeaders(row);
+
+            // Parse coordinates - your CSV uses center_lat, center_lng
+            const centerLat = this.parseFloat(cleanRow.center_lat);
+            const centerLng = this.parseFloat(cleanRow.center_lng);
+
+            // Validate coordinates
+            if (isNaN(centerLat) || isNaN(centerLng)) {
+                console.warn(`⚠️ Invalid coordinates in row ${index}:`, {
+                    center_lat: cleanRow.center_lat,
+                    center_lng: cleanRow.center_lng,
+                    centerLat,
+                    centerLng
+                });
+                return null; // Skip this row
+            }
+
+            // 🔧 TIMEZONE FIX: Preserve timestamp as-is from CSV (should be UTC string)
+            const timestamp = this.preserveTimestamp(cleanRow.timestamp);
+
+            // Process the grid data according to your CSV structure
             const gridData = {
-                id: row.grid_id || `grid_${index}`,
-                centerLat: this.parseFloat(row.center_lat),
-                centerLng: this.parseFloat(row.center_lng),
+                // Basic identification
+                id: cleanRow.grid_id || `grid_${index}`,
+                centerLat: centerLat,
+                centerLng: centerLng,
 
-                // Core pollutant values
-                aqi: this.parseFloat(row.aqi || 0),
-                pm25: this.parseFloat(row.pm25 || 0),
-                pm10: this.parseFloat(row.pm10 || 0),
-                co: this.parseFloat(row.co || 0),
-                no2: this.parseFloat(row.no2 || 0),
-                so2: this.parseFloat(row.so2 || 0),
+                // Core pollutant values - your CSV column names
+                aqi: this.parseFloat(cleanRow.aqi || 0),
+                pm25: this.parseFloat(cleanRow.pm25 || 0),
+                pm10: this.parseFloat(cleanRow.pm10 || 0),
+                co: this.parseFloat(cleanRow.co || 0),
+                no2: this.parseFloat(cleanRow.no2 || 0),
+                so2: this.parseFloat(cleanRow.so2 || 0),
 
-                // Additional metadata
-                timestamp: row.timestamp || new Date().toISOString(),
-                distanceFromCenter: this.parseFloat(row.distance_from_center || 0),
+                // 🔧 TIMEZONE FIX: Store timestamp as UTC string, not Date object
+                timestamp: timestamp,
+                distanceFromCenter: this.parseFloat(cleanRow.distance_from_center || 0),
 
-                // Source contributions - detailed breakdown matching user's CSV
-                sourceContributions: this.parseDetailedSourceContributions(row),
+                // Source contributions - detailed breakdown matching your CSV
+                sourceContributions: this.parseDetailedSourceContributions(cleanRow),
 
                 // Generate grid corners for map display (required by EnhancedGridLayer)
-                corners: this.generateGridCorners(
-                    this.parseFloat(row.center_lat),
-                    this.parseFloat(row.center_lng)
-                ),
+                corners: this.generateGridCorners(centerLat, centerLng),
 
                 // Data quality indicators
-                dataQuality: row.dataQuality || 'csv_data',
-                dataSource: 'timeline_csv'
+                dataQuality: cleanRow.dataQuality || 'csv_data',
+                dataSource: 'timeline_csv',
+                dataType: dataType
             };
 
             return gridData;
-        }).filter(grid => !isNaN(grid.centerLat) && !isNaN(grid.centerLng));
+        }).filter(grid => grid !== null); // Remove null entries (invalid coordinates)
+
+        console.log(`✅ Successfully processed ${processedData.length}/${rawGridData.length} grid cells for ${dataType}`);
+
+        if (processedData.length > 0) {
+            console.log(`🔍 Sample processed grid:`, {
+                id: processedData[0].id,
+                coords: [processedData[0].centerLat, processedData[0].centerLng],
+                aqi: processedData[0].aqi,
+                timestamp: processedData[0].timestamp,
+                timestamp_type: typeof processedData[0].timestamp,
+                hasCorners: !!processedData[0].corners,
+                hasSourceContrib: !!processedData[0].sourceContributions
+            });
+        }
+
+        return processedData;
     }
 
     /**
-     * Parse detailed source contributions from user's CSV structure
+     * 🔧 TIMEZONE FIX: Preserve timestamp exactly as it appears in CSV
+     */
+    preserveTimestamp(rawTimestamp) {
+        if (!rawTimestamp) {
+            return new Date().toISOString(); // Fallback to current UTC time
+        }
+
+        // If it's already a string (which it should be with dynamicTyping: false), return as-is
+        if (typeof rawTimestamp === 'string') {
+            // Ensure it ends with Z if it's missing (assumes UTC)
+            if (rawTimestamp.includes('T') && !rawTimestamp.includes('Z') && !rawTimestamp.includes('+')) {
+                return rawTimestamp + 'Z';
+            }
+            return rawTimestamp;
+        }
+
+        // If it's somehow a Date object, convert back to UTC string
+        if (rawTimestamp instanceof Date) {
+            return rawTimestamp.toISOString();
+        }
+
+        // Fallback: try to parse whatever it is
+        try {
+            return new Date(rawTimestamp).toISOString();
+        } catch (e) {
+            console.warn('⚠️ Could not parse timestamp:', rawTimestamp);
+            return new Date().toISOString();
+        }
+    }
+
+    /**
+     * Parse detailed source contributions from your CSV structure
      */
     parseDetailedSourceContributions(row) {
         return {
@@ -247,7 +385,7 @@ class TimelineDataLoader {
      * Generate grid cell corners from center point (approximate 200m x 200m grid)
      */
     generateGridCorners(centerLat, centerLng) {
-        // Approximate 200m grid cell (adjust as needed)
+        // Approximate 200m grid cell (adjust as needed for your specific grid size)
         const latOffset = 0.0009; // ~100m in latitude
         const lngOffset = 0.0012; // ~100m in longitude (adjusted for Delhi's longitude)
 
@@ -261,16 +399,35 @@ class TimelineDataLoader {
 
     /**
      * Process sensor data and ensure proper format
+     * TIMEZONE FIXED VERSION
      */
-    processSensorData(rawSensorData) {
-        return rawSensorData.map((row, index) => {
+    processSensorData(rawSensorData, dataType = 'historical') {
+        if (!rawSensorData || rawSensorData.length === 0) {
+            console.warn(`⚠️ No raw sensor data provided for ${dataType}`);
+            return [];
+        }
+
+        console.log(`🔄 Processing ${rawSensorData.length} sensor rows for ${dataType}...`);
+
+        const processedData = rawSensorData.map((row, index) => {
             const cleanRow = this.cleanHeaders(row);
 
+            // Parse coordinates - your sensor CSV uses lat, lng
+            const lat = this.parseFloat(cleanRow.lat || cleanRow.latitude);
+            const lng = this.parseFloat(cleanRow.lng || cleanRow.longitude);
+
+            // Validate coordinates
+            if (isNaN(lat) || isNaN(lng)) {
+                console.warn(`⚠️ Invalid sensor coordinates in row ${index}:`, { lat, lng });
+                return null;
+            }
+
             return {
+                // Basic identification
                 id: cleanRow.id || cleanRow.sensor_id || `sensor_${index}`,
                 station: cleanRow.station || cleanRow.name || `Station ${index + 1}`,
-                lat: this.parseFloat(cleanRow.lat || cleanRow.latitude),
-                lng: this.parseFloat(cleanRow.lng || cleanRow.longitude),
+                lat: lat,
+                lng: lng,
 
                 // Pollutant readings
                 aqi: this.parseFloat(cleanRow.aqi || cleanRow.AQI || 0),
@@ -285,70 +442,73 @@ class TimelineDataLoader {
                 humidity: this.parseFloat(cleanRow.humidity || cleanRow.rh || 50),
                 windSpeed: this.parseFloat(cleanRow.windSpeed || cleanRow.wind_speed || 2),
 
-                // Metadata
-                source: cleanRow.source || this.determineSource(cleanRow),
-                severity: cleanRow.severity || this.calculateSeverity(cleanRow.aqi || 0),
-                timestamp: cleanRow.timestamp || cleanRow.time || new Date().toISOString(),
-                description: cleanRow.description || `${cleanRow.station || 'Unknown'} monitoring station`,
+                // Additional attributes from your CSV
+                source: cleanRow.source || 'unknown',
+                severity: cleanRow.severity || 'moderate',
+                description: cleanRow.description || '',
 
-                // Confidence (for predicted data)
-                confidence: this.parseFloat(cleanRow.confidence || 85),
-
-                // Data quality
-                dataQuality: cleanRow.dataQuality || cleanRow.quality || 'generated'
+                // 🔧 TIMEZONE FIX: Preserve timestamp format
+                timestamp: this.preserveTimestamp(cleanRow.timestamp),
+                dataQuality: 'csv_data',
+                dataSource: 'timeline_csv',
+                dataType: dataType
             };
-        }).filter(sensor => !isNaN(sensor.lat) && !isNaN(sensor.lng));
+        }).filter(sensor => sensor !== null);
+
+        console.log(`✅ Successfully processed ${processedData.length}/${rawSensorData.length} sensors for ${dataType}`);
+
+        return processedData;
     }
 
     /**
-     * Clean and normalize header names (simplified for user's known CSV structure)
+     * Clean headers by trimming whitespace and handling common variations
      */
     cleanHeaders(row) {
-        // For user's CSV structure, headers are already clean
-        // This method is kept for fallback compatibility
-        return row;
+        // For your known CSV structure, headers should be clean
+        // But we'll add some basic cleaning just in case
+        const cleaned = {};
+        Object.keys(row).forEach(key => {
+            const trimmedKey = key.trim();
+            // Convert numeric values from strings, but keep timestamps as strings
+            const value = row[key];
+            if (trimmedKey.toLowerCase().includes('timestamp') || trimmedKey.toLowerCase().includes('time')) {
+                // Keep timestamps as strings
+                cleaned[trimmedKey] = value;
+            } else {
+                // Convert other values to numbers if they look numeric
+                cleaned[trimmedKey] = this.maybeParseNumber(value);
+            }
+        });
+        return cleaned;
     }
 
     /**
-     * Determine pollution source based on data
+     * Maybe parse a value as a number, but leave strings as strings
      */
-    determineSource(row) {
-        // Look for explicit source field
-        if (row.source) return row.source;
+    maybeParseNumber(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value !== 'string') return value;
 
-        // Try to infer from station name or other fields
-        const station = (row.station || row.name || '').toLowerCase();
-        if (station.includes('construction') || station.includes('building')) return 'construction';
-        if (station.includes('traffic') || station.includes('vehicle') || station.includes('road')) return 'vehicle';
-        if (station.includes('dust') || station.includes('open')) return 'dust';
-        if (station.includes('industrial') || station.includes('factory')) return 'industrial';
+        const trimmed = value.trim();
+        if (trimmed === '') return 0;
 
-        // Default fallback
-        return 'mixed';
+        const parsed = parseFloat(trimmed);
+        return isNaN(parsed) ? value : parsed;
     }
 
     /**
-     * Calculate severity based on AQI
-     */
-    calculateSeverity(aqi) {
-        if (aqi <= 50) return 'good';
-        if (aqi <= 100) return 'moderate';
-        if (aqi <= 150) return 'unhealthy_sensitive';
-        if (aqi <= 200) return 'unhealthy';
-        if (aqi <= 300) return 'very_unhealthy';
-        return 'hazardous';
-    }
-
-    /**
-     * Safe float parsing
+     * Safe float parsing with debugging
      */
     parseFloat(value) {
+        if (value === null || value === undefined || value === '') {
+            return 0;
+        }
         const parsed = parseFloat(value);
         return isNaN(parsed) ? 0 : parsed;
     }
 
     /**
-     * Get data for specific timestamp with proper grid structure
+     * 🔧 TIMEZONE FIX: Get data for specific timestamp with exact string matching
      */
     getDataForTime(timelineData, timestamp, mode = 'historical') {
         if (!timelineData || !timelineData[mode]) {
@@ -358,20 +518,55 @@ class TimelineDataLoader {
 
         const data = timelineData[mode];
 
-        console.log(`🕒 Getting ${mode} data for time:`, timestamp, `(${data.gridData.length} grid cells, ${data.sensorData.length} sensors)`);
+        // Convert timestamp to ISO string for comparison
+        const targetTimestamp = timestamp.toISOString();
 
-        // Return the CSV data with proper structure
+        console.log(`🕒 TIMEZONE-FIXED: Getting ${mode} data for time:`, targetTimestamp);
+        console.log(`📊 Available data: ${data.gridData.length} grid cells, ${data.sensorData.length} sensors`);
+
+        // 🔧 TIMEZONE FIX: Find exact timestamp matches
+        const matchingGridData = data.gridData.filter(grid => grid.timestamp === targetTimestamp);
+        const matchingSensorData = data.sensorData.filter(sensor => sensor.timestamp === targetTimestamp);
+
+        console.log(`🎯 TIMEZONE-FIXED: Exact matches found:`, {
+            targetTimestamp,
+            gridMatches: matchingGridData.length,
+            sensorMatches: matchingSensorData.length,
+            sampleAvailableTimestamps: data.gridData.slice(0, 3).map(g => g.timestamp)
+        });
+
+        // If no exact matches, return all data (fallback behavior)
+        if (matchingGridData.length === 0 && matchingSensorData.length === 0) {
+            console.log(`⚠️ No exact timestamp matches, returning all available data for ${mode}`);
+            return {
+                gridData: data.gridData,
+                sensorData: data.sensorData,
+                timestamp: timestamp,
+                mode: mode,
+                dataType: data.dataType,
+                metadata: {
+                    totalGridCells: data.gridData.length,
+                    totalSensors: data.sensorData.length,
+                    source: 'csv_files_fallback',
+                    mode: mode,
+                    exactMatch: false
+                }
+            };
+        }
+
+        // Return exact matches
         return {
-            gridData: data.gridData, // This now contains processed CSV data with corners, sourceContributions, etc.
-            sensorData: data.sensorData,
+            gridData: matchingGridData.length > 0 ? matchingGridData : data.gridData,
+            sensorData: matchingSensorData.length > 0 ? matchingSensorData : data.sensorData,
             timestamp: timestamp,
             mode: mode,
             dataType: data.dataType,
             metadata: {
-                totalGridCells: data.gridData.length,
-                totalSensors: data.sensorData.length,
-                source: 'csv_files',
-                mode: mode
+                totalGridCells: matchingGridData.length || data.gridData.length,
+                totalSensors: matchingSensorData.length || data.sensorData.length,
+                source: 'csv_files_exact_match',
+                mode: mode,
+                exactMatch: matchingGridData.length > 0 || matchingSensorData.length > 0
             }
         };
     }
@@ -380,7 +575,7 @@ class TimelineDataLoader {
      * Fallback data in case CSV loading fails
      */
     getFallbackData() {
-        console.log('Using fallback timeline data');
+        console.log('⚠️ Using fallback timeline data');
 
         return {
             historical: {
@@ -407,7 +602,10 @@ class TimelineDataLoader {
                 loadedAt: new Date().toISOString(),
                 version: '1.0',
                 source: 'fallback',
-                error: 'CSV files not available'
+                error: 'CSV files not available',
+                timezoneInfo: {
+                    note: 'Fallback data, no timezone issues'
+                }
             }
         };
     }
@@ -417,7 +615,7 @@ class TimelineDataLoader {
      */
     clearCache() {
         this.cache.clear();
-        console.log('Timeline data cache cleared');
+        console.log('🧹 Timeline data cache cleared');
     }
 }
 

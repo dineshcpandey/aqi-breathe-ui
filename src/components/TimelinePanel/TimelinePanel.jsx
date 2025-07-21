@@ -1,4 +1,4 @@
-// src/components/TimelinePanel/TimelinePanel.jsx - FIXED VERSION with proper CSS import
+// src/components/TimelinePanel/TimelinePanel.jsx - TIMEZONE FIXED VERSION
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './TimelinePanel.css';
 
@@ -35,20 +35,24 @@ const TimelinePanel = ({
         return Math.max(0, Math.min(100, (currentMs / totalMs) * 100));
     }, [timelineConfig.start, timelineConfig.end]);
 
-    // Get time from position percentage - useCallback to prevent recreation
+    // 🔧 FIXED: Get time from position percentage with UTC timezone handling
     const getTimeFromPosition = useCallback((percentage) => {
         const totalMs = timelineConfig.end.getTime() - timelineConfig.start.getTime();
         const targetMs = timelineConfig.start.getTime() + (totalMs * percentage / 100);
         const rawTime = new Date(targetMs);
 
-        // Round to nearest hour to match CSV data structure
+        // 🎯 CRITICAL FIX: Round to nearest hour in UTC instead of local timezone
         const roundedTime = new Date(rawTime);
-        roundedTime.setMinutes(0, 0, 0); // Set minutes, seconds, milliseconds to 0
-        console.log(">>>>>>>> ", roundedTime)
-        console.log('🕒 Timeline position conversion:', {
+
+        // Use UTC methods to ensure timezone consistency with CSV data
+        roundedTime.setUTCMinutes(0, 0, 0); // Set minutes, seconds, milliseconds to 0 in UTC
+
+        console.log('🕒 TIMEZONE-FIXED Timeline position conversion:', {
             percentage: percentage.toFixed(1) + '%',
             rawTime: rawTime.toISOString(),
-            roundedToHour: roundedTime.toISOString()
+            rawTimeUTC: `${rawTime.getUTCFullYear()}-${String(rawTime.getUTCMonth() + 1).padStart(2, '0')}-${String(rawTime.getUTCDate()).padStart(2, '0')}T${String(rawTime.getUTCHours()).padStart(2, '0')}:${String(rawTime.getUTCMinutes()).padStart(2, '0')}:${String(rawTime.getUTCSeconds()).padStart(2, '0')}.${String(rawTime.getUTCMilliseconds()).padStart(3, '0')}Z`,
+            roundedToHourUTC: roundedTime.toISOString(),
+            timezoneFix: 'Using setUTCMinutes instead of setMinutes'
         });
 
         return roundedTime;
@@ -68,6 +72,12 @@ const TimelinePanel = ({
         const rect = sliderRef.current.getBoundingClientRect();
         const percentage = ((event.clientX - rect.left) / rect.width) * 100;
         const newTime = getTimeFromPosition(percentage);
+
+        console.log('🎯 TIMEZONE-FIXED slider click:', {
+            percentage: percentage.toFixed(1) + '%',
+            newTimeUTC: newTime.toISOString(),
+            shouldMatchCSV: 'This timestamp should now match CSV data exactly'
+        });
 
         setLocalTime(newTime);
         onTimeChange?.(newTime);
@@ -111,22 +121,30 @@ const TimelinePanel = ({
         setLocalTime(currentTimestamp);
     }, [currentTimestamp]);
 
-    // Format time for display - useCallback to prevent recreation
+    // 🔧 FIXED: Format time for display with timezone awareness
     const formatTime = useCallback((time) => {
         return time.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'UTC', // 🎯 Show time in UTC to match CSV data
+            timeZoneName: 'short'
         });
     }, []);
 
-    // Quick jump buttons - useMemo to prevent recreation
+    // Quick jump buttons with timezone-aware timestamps - useMemo to prevent recreation
     const quickJumps = useMemo(() => [
         { label: 'Start', time: timelineConfig.start },
-        { label: 'Rush Hour', time: new Date('2025-07-18T08:30:00Z') },
+        {
+            label: 'Rush Hour',
+            time: new Date('2025-07-18T08:00:00Z') // 🔧 FIXED: Ensure UTC timestamp
+        },
         { label: 'Now', time: timelineConfig.current || timelineConfig.now },
-        { label: 'Tomorrow', time: new Date('2025-07-21T09:00:00Z') },
+        {
+            label: 'Tomorrow',
+            time: new Date('2025-07-21T09:00:00Z') // 🔧 FIXED: Ensure UTC timestamp
+        },
         { label: 'End', time: timelineConfig.end }
     ], [timelineConfig.start, timelineConfig.current, timelineConfig.now, timelineConfig.end]);
 
@@ -135,13 +153,16 @@ const TimelinePanel = ({
     const nowPosition = getTimePosition(timelineConfig.current || timelineConfig.now);
     const currentZone = getTimeZone(localTime);
 
-    // Debug logging
-    console.log('🕒 Timeline render debug:', {
+    // Debug logging with timezone info
+    console.log('🕒 TIMEZONE-FIXED Timeline render debug:', {
         currentPosition,
         nowPosition,
         currentZone,
-        localTime,
-        timelineConfig
+        localTimeUTC: localTime.toISOString(),
+        timelineConfigStartUTC: timelineConfig.start.toISOString(),
+        timelineConfigCurrentUTC: (timelineConfig.current || timelineConfig.now).toISOString(),
+        timelineConfigEndUTC: timelineConfig.end.toISOString(),
+        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
 
     return (
@@ -184,9 +205,9 @@ const TimelinePanel = ({
             {/* Timeline Slider */}
             <div className="timeline-slider-container">
                 <div className="timeline-labels">
-                    <span className="timeline-label start">Jul 15</span>
-                    <span className="timeline-label middle">Jul 20</span>
-                    <span className="timeline-label end">Jul 25</span>
+                    <span className="timeline-label start">Jul 15 (UTC)</span>
+                    <span className="timeline-label middle">Jul 20 (UTC)</span>
+                    <span className="timeline-label end">Jul 25 (UTC)</span>
                 </div>
 
                 <div
@@ -231,11 +252,11 @@ const TimelinePanel = ({
                     <div className="zone-indicators">
                         <div className="zone-indicator historical">
                             <span className="zone-icon">🔵</span>
-                            <span className="zone-text">Historical</span>
+                            <span className="zone-text">Historical (UTC)</span>
                         </div>
                         <div className="zone-indicator predicted">
                             <span className="zone-icon">🟠</span>
-                            <span className="zone-text">Predicted</span>
+                            <span className="zone-text">Predicted (UTC)</span>
                         </div>
                     </div>
                 </div>
@@ -249,6 +270,8 @@ const TimelinePanel = ({
                             key={index}
                             className="quick-jump-btn"
                             onClick={() => {
+                                console.log('🎯 TIMEZONE-FIXED quick jump to:', jump.time.toISOString());
+
                                 setLocalTime(jump.time);
                                 onTimeChange?.(jump.time);
                                 const zone = getTimeZone(jump.time);

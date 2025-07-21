@@ -206,12 +206,16 @@ function App() {
     currentSensorData,
     dataSourceInfo
   } = React.useMemo(() => {
-    console.log('=== Step 3: Recomputing data with timeline integration ===');
-    console.log('Timeline Active:', isTimelineActive);
-    console.log('Timeline Mode:', currentTimelineMode);
-    console.log('Timestamp:', currentTimestamp);
+    console.log('=== TIMELINE FIX: Data Processing ===');
+    console.log('🔄 Trigger Info:', {
+      isTimelineActive,
+      currentTimelineMode,
+      timestamp: currentTimestamp.toISOString(),
+      selectedPollutant,
+      hasTimelineData: !!timelineData
+    });
 
-    // Step 3: Determine data source based on timeline state
+    // Step 1: Determine data source
     let activeGridData = enhancedGridData;
     let activeSensorData = sensorData;
     let dataSourceInfo = {
@@ -220,6 +224,7 @@ function App() {
       timestamp: new Date(),
       description: 'Current live data'
     };
+
 
     if (isTimelineActive && timelineData) {
       // Use timeline data when timeline is active
